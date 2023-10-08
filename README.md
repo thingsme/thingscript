@@ -7,11 +7,41 @@ It can be embedded in your Go application as a library.
 
 ### STRING
 
+Double quoted text in unicode.
+
+```go
+var str1 = "hello"
+str2 := "world"
+str3 := str1 + " "+ str2
+```
+
 ### BOOLEAN
+
+`true` and `false`
+
+```go
+var b1 = true
+b2 := false
+b3 := 10 < 20 // true
+```
 
 ### INTEGER
 
+64 bit integer number
+
+```go
+var i1 = 123
+zero := 0
+```
+
 ### FLOAT
+
+64 bit floating point number
+
+```go
+var f1 = 3.14
+zero := 0.0
+```
 
 ## Control flow
 
@@ -24,7 +54,7 @@ var m = 20
 max := if n > m { n } else { m }
 ```
 
-### Functions
+### Function
 
 ```go
 
