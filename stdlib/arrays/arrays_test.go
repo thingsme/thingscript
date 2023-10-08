@@ -3,8 +3,20 @@ package arrays
 import (
 	"testing"
 
+	"github.com/thingsme/thingscript/eval"
+	"github.com/thingsme/thingscript/lexer"
 	"github.com/thingsme/thingscript/object"
+	"github.com/thingsme/thingscript/parser"
 )
+
+func testEval(input string) object.Object {
+	l := lexer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	env := object.NewEnvironment()
+	env.RegisterPackages(New())
+	return eval.Eval(program, env)
+}
 
 func checkInteger(t *testing.T, obj object.Object, expect int64) {
 	t.Helper()
@@ -88,4 +100,52 @@ func TestHeadTail(t *testing.T) {
 
 	checkInteger(t, headRet, 1)
 	checkIntegerArray(t, tailRet, []int64{2, 3})
+}
+
+func TestFunctions(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected any
+	}{
+		{`[1, 2, 3].length()`, 3},
+		{`[1, 2, 3].length`, 3},
+		{`[1, 2, 3].head()`, 1},
+		{`[1, 2, 3].head`, 1},
+		{`[1, 2, 3].tail().length`, 2},
+		{`[1, 2, 3].tail[0]`, 2},
+		{`[1, 2, 3].tail[1]`, 3},
+		{`[1,2,3].tail().tail().length()`, 1},
+		{`[1,2,3].tail.tail.length`, 1},
+		{`[1,2,3].tail().tail()[0]`, 3},
+		{`[1,2,3].tail().tail[0]`, 3},
+		{`[1, 2, 3].last()`, 3},
+		{`[1, 2, 3].last`, 3},
+		{`[1,2,3].init().length()`, 2},
+		{`[1,2,3].init.length`, 2},
+		{`[1,2,3].init()[0]`, 1},
+		{`[1,2,3].init[0]`, 1},
+		{`[1,2,3].init()[1]`, 2},
+		{`[1,2,3].init[1]`, 2},
+		{`func arr(){return [1,2,3]}; arr().head()`, 1},
+		{`func arr(){return [1,2,3]}; arr().head`, 1},
+		{`func arr(){return [1,2,3]}; arr().last()`, 3},
+		{`func arr(){return [1,2,3]}; arr().last`, 3},
+		{`var b = [1,2,3].push(4); b[3]`, 4},
+	}
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		switch expected := tt.expected.(type) {
+		case int:
+			checkInteger(t, evaluated, int64(expected))
+		case string:
+			errObj, ok := evaluated.(*object.Error)
+			if !ok {
+				t.Errorf("object is not Error. got=%T (%+v) <= %s", evaluated, evaluated, tt.input)
+			}
+			if errObj.Message != expected {
+				t.Errorf("wrong error message. expected=%q, got=%q",
+					expected, errObj.Message)
+			}
+		}
+	}
 }
