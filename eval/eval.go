@@ -72,6 +72,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return val
 		}
 		return &object.ReturnValue{Value: val}
+	case *ast.BreakStatement:
+		return &object.Break{}
 	case *ast.AssignStatement:
 		_, ok := env.Get(node.Name.Value)
 		if !ok {
@@ -109,6 +111,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return right
 		}
 		return evalInfixExpression(node.Operator, left, right)
+	case *ast.WhileExpression:
+		return evalWhileExpression(node, env)
 	case *ast.IfExpression:
 		return evalIfExpression(node, env)
 	case *ast.ImmediateIfExpression:
@@ -191,7 +195,7 @@ func evalBlockStatement(block *ast.BlockStatement, env *object.Environment) obje
 
 		if result != nil {
 			rt := result.Type()
-			if rt == object.RETURN_VALUE_OBJ || rt == object.ERROR_OBJ {
+			if rt == object.RETURN_VALUE_OBJ || rt == object.ERROR_OBJ || rt == object.BREAK_OBJ {
 				return result
 			}
 		}
@@ -289,6 +293,24 @@ func unwrapReturnValue(obj object.Object) object.Object {
 		return returnValue.Value
 	}
 	return obj
+}
+
+func evalWhileExpression(we *ast.WhileExpression, env *object.Environment) object.Object {
+	for {
+		condition := Eval(we.Condition, env)
+		if isError(condition) {
+			return condition
+		}
+		if isTruthy(condition) {
+			ret := Eval(we.Block, env)
+			if ret != nil && ret.Type() == object.BREAK_OBJ {
+				break
+			}
+		} else {
+			break
+		}
+	}
+	return nil
 }
 
 func evalIfExpression(ie *ast.IfExpression, env *object.Environment) object.Object {

@@ -501,6 +501,7 @@ func testBooleanLiteral(t *testing.T, exp ast.Expression, value bool) bool {
 }
 
 func testIdentifier(t *testing.T, exp ast.Expression, value string) bool {
+	t.Helper()
 	ident, ok := exp.(*ast.Identifier)
 	if !ok {
 		t.Errorf("exp not *ast.Identifier, got=%T", exp)
@@ -518,6 +519,7 @@ func testIdentifier(t *testing.T, exp ast.Expression, value string) bool {
 }
 
 func testLiteralExpression(t *testing.T, exp ast.Expression, expected any) bool {
+	t.Helper()
 	switch v := expected.(type) {
 	case int:
 		return testIntegerLiteral(t, exp, int64(v))
@@ -537,6 +539,7 @@ func testLiteralExpression(t *testing.T, exp ast.Expression, expected any) bool 
 }
 
 func testInfixExpression(t *testing.T, exp ast.Expression, left any, operator string, right any) bool {
+	t.Helper()
 	opExp, ok := exp.(*ast.InfixExpression)
 	if !ok {
 		t.Errorf("exp is not ast.InfixExpression, got=%T(%s)", exp, exp)
@@ -688,6 +691,43 @@ func TestIfElseExpression(t *testing.T) {
 	}
 	if !testIdentifier(t, alternative.Expression, "y") {
 		return
+	}
+}
+
+func TestWhileExpression(t *testing.T) {
+	input := `while (x < 5) { break }`
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParseErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d",
+			1, len(program.Statements))
+	}
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement, got=%T",
+			program.Statements[0])
+	}
+	exp, ok := stmt.Expression.(*ast.WhileExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.WhileStatement, got=%T", stmt.Expression)
+	}
+	if exp.Condition.String() != "(x < 5)" {
+		t.Errorf("condition is not %s. got=%s", "x < 5", exp.Condition.String())
+		return
+	}
+	if len(exp.Block.Statements) != 1 {
+		t.Errorf("block is not 1 statements. got=%d", len(exp.Block.Statements))
+	}
+	breakStatement, ok := exp.Block.Statements[0].(*ast.BreakStatement)
+	if !ok {
+		t.Fatalf("Statements[0] is not ast.BreakStatement, got=%T",
+			exp.Block.Statements[0])
+	}
+	if breakStatement.TokenLiteral() != "break" {
+		t.Errorf("block is not break statement. got=%s", breakStatement.String())
 	}
 }
 
