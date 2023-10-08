@@ -61,6 +61,9 @@ const (
 	IF     TokenType = "IF"
 	ELSE   TokenType = "ELSE"
 	RETURN TokenType = "RETURN"
+	WHILE  TokenType = "WHILE"
+	DO     TokenType = "DO"
+	BREAK  TokenType = "BREAK"
 
 	// comment
 	COMMENT TokenType = "COMMENT"
@@ -74,6 +77,16 @@ var keywords = map[string]TokenType{
 	"if":     IF,
 	"else":   ELSE,
 	"return": RETURN,
+	"while":  WHILE,
+	"do":     DO,
+	"break":  BREAK,
+	// reserved
+	"const": ILLEGAL,
+	"def":   ILLEGAL,
+	"type":  ILLEGAL,
+	"let":   ILLEGAL,
+	"class": ILLEGAL,
+	"for":   ILLEGAL,
 }
 
 func LookupIdent(ident string) TokenType {

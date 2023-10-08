@@ -74,6 +74,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.LBRACE, p.parseHashLiteral)
 	p.registerPrefix(token.LBRACKET, p.parseArrayLiteral)
 	p.registerPrefix(token.IF, p.parseIfExpression)
+	p.registerPrefix(token.WHILE, p.parseWhileExpression)
+	p.registerPrefix(token.DO, p.parseDoWhileExpression)
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
 	p.registerInfix(token.MINUS, p.parseInfixExpression)
@@ -174,6 +176,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseVarStatement()
 	case p.curToken.Type == token.RETURN:
 		return p.parseReturnStatement()
+	case p.curToken.Type == token.BREAK:
+		return p.parseBreakStatement()
 	case p.curToken.Type == token.FUNC && p.peekTokenIs(token.IDENT):
 		return p.parseFunctionStatement()
 	case p.curToken.Type == token.IDENT && p.peekTokenIs(token.VARASSIGN):
@@ -199,6 +203,14 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
 	p.nextToken()
 	stmt.ReturnValue = p.parseExpression(LOWEST)
+	for p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+	return stmt
+}
+
+func (p *Parser) parseBreakStatement() *ast.BreakStatement {
+	stmt := &ast.BreakStatement{Token: p.curToken}
 	for p.peekTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}
@@ -445,6 +457,37 @@ func (p *Parser) parseIfExpression() ast.Expression {
 			return nil
 		}
 		expression.Alternative = p.parseBlockStatement()
+	}
+	return expression
+}
+
+func (p *Parser) parseWhileExpression() ast.Expression {
+	expression := &ast.WhileExpression{Token: p.curToken}
+	p.nextToken()
+	expression.Condition = p.parseExpression(LOWEST)
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	expression.Block = p.parseBlockStatement()
+	for p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+	return expression
+}
+
+func (p *Parser) parseDoWhileExpression() ast.Expression {
+	expression := &ast.DoWhileExpression{Token: p.curToken}
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	expression.Block = p.parseBlockStatement()
+	if !p.expectPeek(token.WHILE) {
+		return nil
+	}
+	p.nextToken()
+	expression.Condition = p.parseExpression(LOWEST)
+	for p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
 	}
 	return expression
 }

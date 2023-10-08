@@ -39,6 +39,13 @@ func isError(obj object.Object) bool {
 	return false
 }
 
+func isBreak(obj object.Object) bool {
+	if obj != nil {
+		return obj.Type() == object.BREAK_OBJ
+	}
+	return false
+}
+
 func isTruthy(obj object.Object) bool {
 	switch obj {
 	case NULL:
@@ -72,6 +79,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return val
 		}
 		return &object.ReturnValue{Value: val}
+	case *ast.BreakStatement:
+		return &object.Break{}
 	case *ast.AssignStatement:
 		_, ok := env.Get(node.Name.Value)
 		if !ok {
@@ -109,6 +118,10 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return right
 		}
 		return evalInfixExpression(node.Operator, left, right)
+	case *ast.WhileExpression:
+		return evalWhileExpression(node, env)
+	case *ast.DoWhileExpression:
+		return evalDoWhileExpression(node, env)
 	case *ast.IfExpression:
 		return evalIfExpression(node, env)
 	case *ast.ImmediateIfExpression:
@@ -191,7 +204,7 @@ func evalBlockStatement(block *ast.BlockStatement, env *object.Environment) obje
 
 		if result != nil {
 			rt := result.Type()
-			if rt == object.RETURN_VALUE_OBJ || rt == object.ERROR_OBJ {
+			if rt == object.RETURN_VALUE_OBJ || rt == object.ERROR_OBJ || rt == object.BREAK_OBJ {
 				return result
 			}
 		}
@@ -289,6 +302,46 @@ func unwrapReturnValue(obj object.Object) object.Object {
 		return returnValue.Value
 	}
 	return obj
+}
+
+func evalWhileExpression(we *ast.WhileExpression, env *object.Environment) object.Object {
+	for {
+		condition := Eval(we.Condition, env)
+		if isError(condition) {
+			return condition
+		}
+		if !isTruthy(condition) {
+			break
+		}
+		ret := Eval(we.Block, env)
+		if isError(ret) {
+			return ret
+		}
+		if isBreak(ret) {
+			break
+		}
+	}
+	return nil
+}
+
+func evalDoWhileExpression(we *ast.DoWhileExpression, env *object.Environment) object.Object {
+	for {
+		ret := Eval(we.Block, env)
+		if isError(ret) {
+			return ret
+		}
+		if isBreak(ret) {
+			break
+		}
+		condition := Eval(we.Condition, env)
+		if isError(condition) {
+			return condition
+		}
+		if !isTruthy(condition) {
+			break
+		}
+	}
+	return nil
 }
 
 func evalIfExpression(ie *ast.IfExpression, env *object.Environment) object.Object {

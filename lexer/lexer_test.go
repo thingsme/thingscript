@@ -32,6 +32,8 @@ func TestNextToken(t *testing.T) {
 	} else {
 		return false;
 	}
+	while i < 10 { i -= 1 }
+	do { i += 1 } while (i < 10)
 	/*
 		block comment
 	*/ x = y // line comment
@@ -163,6 +165,29 @@ func TestNextToken(t *testing.T) {
 		{token.FALSE, "false"},
 		{token.SEMICOLON, ";"},
 		{token.RBRACE, "}"},
+		// 	while i < 10 { i -= 1 }
+		{token.WHILE, "while"},
+		{token.IDENT, "i"},
+		{token.LT, "<"},
+		{token.INT, "10"},
+		{token.LBRACE, "{"},
+		{token.IDENT, "i"},
+		{token.SUBASSIGN, "-="},
+		{token.INT, "1"},
+		{token.RBRACE, "}"},
+		// do { i += 1 } while (i < 10)
+		{token.DO, "do"},
+		{token.LBRACE, "{"},
+		{token.IDENT, "i"},
+		{token.ADDASSIGN, "+="},
+		{token.INT, "1"},
+		{token.RBRACE, "}"},
+		{token.WHILE, "while"},
+		{token.LPAREN, "("},
+		{token.IDENT, "i"},
+		{token.LT, "<"},
+		{token.INT, "10"},
+		{token.RPAREN, ")"},
 		// comment
 		{token.COMMENT, "\n\t\tblock comment\n\t"},
 		{token.IDENT, "x"},

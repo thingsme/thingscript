@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"testing"
 
+	gofmt "fmt"
+
 	"github.com/thingsme/thingscript/lexer"
 	"github.com/thingsme/thingscript/object"
 	"github.com/thingsme/thingscript/parser"
@@ -15,6 +17,9 @@ func testEval(input string) object.Object {
 	l := lexer.New(input)
 	p := parser.New(l)
 	program := p.ParseProgram()
+	for _, err := range p.Errors() {
+		gofmt.Println("Parse Error:", err)
+	}
 	env := object.NewEnvironment()
 	env.RegisterPackages(stdlib.Packages()...)
 	return Eval(program, env)
@@ -200,6 +205,46 @@ func TestImmediateIfExpression(t *testing.T) {
 		{`var v = nil; 5 * (v ?? 20)`, 100},
 		{`func v(){ return nil }; v() ?? 20`, 20},
 		{`var v = func(){ return nil }; var x = func() { return 20 }; v() ?? x()`, 20},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		integer, ok := tt.expected.(int)
+		if ok {
+			testIntegerObject(t, evaluated, int64(integer))
+		} else {
+			testNullObject(t, evaluated)
+		}
+	}
+}
+
+func TestWhileExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected any
+	}{
+		{`var sum = 0; var v = 0; while v < 10 { v += 1; sum += v; }; sum`, 55},
+		{`var sum = 0; var v = 0; while v < 20 { v += 1; sum += v; if (v == 10) { break } }; sum`, 55},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		integer, ok := tt.expected.(int)
+		if ok {
+			testIntegerObject(t, evaluated, int64(integer))
+		} else {
+			testNullObject(t, evaluated)
+		}
+	}
+}
+
+func TestDoWhileExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected any
+	}{
+		{`var sum = 0; var v = 0; do { v += 1; sum += v; } while v < 10 ; sum`, 55},
+		{`var sum = 0; var v = 0; do { v += 1; sum += v; if (v == 10) { break } } while v < 20; sum`, 55},
 	}
 
 	for _, tt := range tests {
