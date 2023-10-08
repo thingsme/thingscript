@@ -22,6 +22,7 @@ const (
 	HASH_OBJ         = "HASH"
 	FUNCTION_OBJ     = "FUNCTION"
 	BUILTIN_OBJ      = "BUILTIN"
+	IMPORT_OBJ       = "IMPORT"
 	NULL_OBJ         = "NULL"
 	RETURN_VALUE_OBJ = "RETURN_VALUE"
 	ERROR_OBJ        = "ERROR"
@@ -36,6 +37,17 @@ type Null struct{}
 
 func (n *Null) Type() ObjectType { return NULL_OBJ }
 func (n *Null) Inspect() string  { return "null" }
+
+type Error struct {
+	Message string
+}
+
+func (e *Error) Type() ObjectType { return ERROR_OBJ }
+func (e *Error) Inspect() string  { return "ERROR: " + e.Message }
+
+func Errorf(format string, args ...any) *Error {
+	return &Error{Message: fmt.Sprintf(format, args...)}
+}
 
 type Integer struct {
 	Value int64
@@ -88,13 +100,6 @@ type ReturnValue struct {
 
 func (rv *ReturnValue) Type() ObjectType { return RETURN_VALUE_OBJ }
 func (rv *ReturnValue) Inspect() string  { return rv.Value.Inspect() }
-
-type Error struct {
-	Message string
-}
-
-func (e *Error) Type() ObjectType { return ERROR_OBJ }
-func (e *Error) Inspect() string  { return "ERROR: " + e.Message }
 
 type Function struct {
 	Parameters []*ast.Identifier
@@ -190,4 +195,13 @@ func (h *Hash) Inspect() string {
 	out.WriteString(strings.Join(pairs, ", "))
 	out.WriteString("}")
 	return out.String()
+}
+
+type Import struct {
+	Name string
+}
+
+func (p *Import) Type() ObjectType { return IMPORT_OBJ }
+func (p *Import) Inspect() string {
+	return fmt.Sprintf("import %q", p.Name)
 }

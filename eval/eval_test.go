@@ -1,11 +1,14 @@
 package eval
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/thingsme/thingscript/lexer"
 	"github.com/thingsme/thingscript/object"
 	"github.com/thingsme/thingscript/parser"
+	"github.com/thingsme/thingscript/stdlib"
+	"github.com/thingsme/thingscript/stdlib/fmt"
 )
 
 func testEval(input string) object.Object {
@@ -13,6 +16,7 @@ func testEval(input string) object.Object {
 	p := parser.New(l)
 	program := p.ParseProgram()
 	env := object.NewEnvironment()
+	env.RegisterPackages(stdlib.Packages()...)
 	return Eval(program, env)
 }
 
@@ -45,6 +49,7 @@ func TestEvalIntegerExpression(t *testing.T) {
 }
 
 func testIntegerObject(t *testing.T, obj object.Object, expected int64) bool {
+	t.Helper()
 	result, ok := obj.(*object.Integer)
 	if !ok {
 		t.Errorf("object is not Integer, got=%T (%+v)", obj, obj)
@@ -534,7 +539,7 @@ func TestBuiltinFunction(t *testing.T) {
 		{`("hello" + " " + "world").length`, 11},
 		{`1.length()`, "identifier not found: length"},
 		{`1.length`, "identifier not found: length"},
-		{`"one".length("two")`, "wrong number of arguments. got=2, want=1"},
+		{`"one".length("two")`, "wrong number of arguments. got=1, want=0"},
 		{`[1, 2, 3].length()`, 3},
 		{`[1, 2, 3].length`, 3},
 		{`[1, 2, 3].head()`, 1},
@@ -560,7 +565,7 @@ func TestBuiltinFunction(t *testing.T) {
 		case string:
 			errObj, ok := evaluated.(*object.Error)
 			if !ok {
-				t.Errorf("object is not Error. got=%T (%+v)", evaluated, evaluated)
+				t.Errorf("object is not Error. got=%T (%+v) <= %s", evaluated, evaluated, tt.input)
 			}
 			if errObj.Message != expected {
 				t.Errorf("wrong error message. expected=%q, got=%q",
@@ -590,6 +595,43 @@ func TestAccessOperation(t *testing.T) {
 		switch expected := tt.expected.(type) {
 		case int:
 			testIntegerObject(t, evaluated, int64(expected))
+		}
+	}
+}
+
+func TestImports(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{
+			input: `
+				var out = import("fmt")
+				out.println(1, 2, "x")
+			`,
+			expected: "1 2 x\n",
+		},
+		{
+			input: `
+				out := import("fmt")
+				out.println(1, 2, "x")
+			`,
+			expected: "1 2 x\n",
+		},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := parser.New(l)
+		program := p.ParseProgram()
+		env := object.NewEnvironment()
+		out := &bytes.Buffer{}
+		env.RegisterPackages(fmt.New(fmt.WithWriter(out)))
+		ret := Eval(program, env)
+		if ret != nil && ret.Type() == object.ERROR_OBJ {
+			t.Errorf("result is error; %s", ret.Inspect())
+		}
+		if out.String() != tt.expected {
+			t.Errorf("result is not %q, got=%q", tt.expected, out.String())
 		}
 	}
 }
