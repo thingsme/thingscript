@@ -19,3 +19,10 @@
 
 # Go workspace file
 go.work
+
+.vscode/
+.DS_Store
+tmp/
+
+thingscript
+cover.out
