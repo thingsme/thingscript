@@ -9,6 +9,7 @@ import (
 	"github.com/thingsme/thingscript/lexer"
 	"github.com/thingsme/thingscript/object"
 	"github.com/thingsme/thingscript/parser"
+	"github.com/thingsme/thingscript/stdlib"
 )
 
 const PROMPT = ">> "
@@ -16,9 +17,9 @@ const PROMPT = ">> "
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
 	env := object.NewEnvironment()
-
+	env.RegisterPackages(stdlib.Packages()...)
 	for {
-		fmt.Fprintf(out, PROMPT)
+		fmt.Fprint(out, PROMPT)
 		scanned := scanner.Scan()
 		if !scanned {
 			return

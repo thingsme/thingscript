@@ -232,44 +232,47 @@ func evalAccessExpression(exp *ast.AccessExpression, env *object.Environment) ob
 	if isError(left) {
 		return left
 	}
-	typePrefix := ""
-	switch left.Type() {
-	case object.STRING_OBJ:
-		typePrefix = "$string_"
-	case object.ARRAY_OBJ:
-		typePrefix = "$array_"
-	case object.HASH_OBJ:
-		typePrefix = "$hash_"
+
+	var pkg object.Package
+	var ok bool
+	switch lvalue := left.(type) {
+	case *object.String:
+		pkg, _ = env.Import("$string")
+	case *object.Array:
+		pkg, _ = env.Import("$array")
+	case *object.Hash:
+		pkg, _ = env.Import("$hash")
+	case *object.Import:
+		pkg, ok = env.Import(lvalue.Name)
+		if !ok {
+			return newError("package not found %q", lvalue.Name)
+		}
 	default:
-		return newError("invalid access operator of type %q", left.Type())
+		return newError("package not found for %T", left)
 	}
+
 	switch r := exp.Right.(type) {
 	case *ast.Identifier:
-		fn, ok := builtins[typePrefix+r.Value]
-		if !ok {
-			return newError("invalid access field of type %q %s", left.Type(), r.Value)
+		fn := pkg.Member(r.Value)
+		if fn == nil {
+			return newError("function %q not found in %q", r.Value, pkg.Name())
 		}
-		return fn.Fn(left)
+		ret := fn(left)
+		return ret
 	case *ast.CallExpression:
-		fn, ok := r.Function.(*ast.Identifier)
+		fnIdent, ok := r.Function.(*ast.Identifier)
 		if !ok {
-			return newError("invalid access method of type %q %s", left.Type(), r.Function.String())
+			return newError("undefined %q in %q", r.Function.String(), pkg.Name())
 		}
-		fn.Value = typePrefix + r.Function.String()
-		function := Eval(r.Function, env)
-		if isError(function) {
-			return function
-			//return newError("invalid method %q of %s, %s", fn.Value, left.Type(), function)
+		fn := pkg.Member(fnIdent.Value)
+		if fn == nil {
+			return newError("function %q not found in %q", fnIdent.Value, pkg.Name())
 		}
 		args := evalExpressions(r.Arguments, env)
-		if len(args) == 1 && isError(args[0]) {
-			return args[0]
-		}
-		params := []object.Object{left}
-		params = append(params, args...)
-		return applyFunction(function, params)
+		ret := fn(left, args...)
+		return ret
 	default:
-		return newError("invalid access operator %q %T", left.Type(), r)
+		return newError("invalid access operator %q.(%T)", pkg.Name(), r)
 	}
 }
 
