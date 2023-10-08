@@ -39,6 +39,13 @@ func isError(obj object.Object) bool {
 	return false
 }
 
+func isBreak(obj object.Object) bool {
+	if obj != nil {
+		return obj.Type() == object.BREAK_OBJ
+	}
+	return false
+}
+
 func isTruthy(obj object.Object) bool {
 	switch obj {
 	case NULL:
@@ -113,6 +120,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return evalInfixExpression(node.Operator, left, right)
 	case *ast.WhileExpression:
 		return evalWhileExpression(node, env)
+	case *ast.DoWhileExpression:
+		return evalDoWhileExpression(node, env)
 	case *ast.IfExpression:
 		return evalIfExpression(node, env)
 	case *ast.ImmediateIfExpression:
@@ -301,12 +310,34 @@ func evalWhileExpression(we *ast.WhileExpression, env *object.Environment) objec
 		if isError(condition) {
 			return condition
 		}
-		if isTruthy(condition) {
-			ret := Eval(we.Block, env)
-			if ret != nil && ret.Type() == object.BREAK_OBJ {
-				break
-			}
-		} else {
+		if !isTruthy(condition) {
+			break
+		}
+		ret := Eval(we.Block, env)
+		if isError(ret) {
+			return ret
+		}
+		if isBreak(ret) {
+			break
+		}
+	}
+	return nil
+}
+
+func evalDoWhileExpression(we *ast.DoWhileExpression, env *object.Environment) object.Object {
+	for {
+		ret := Eval(we.Block, env)
+		if isError(ret) {
+			return ret
+		}
+		if isBreak(ret) {
+			break
+		}
+		condition := Eval(we.Condition, env)
+		if isError(condition) {
+			return condition
+		}
+		if !isTruthy(condition) {
 			break
 		}
 	}

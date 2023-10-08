@@ -75,6 +75,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.LBRACKET, p.parseArrayLiteral)
 	p.registerPrefix(token.IF, p.parseIfExpression)
 	p.registerPrefix(token.WHILE, p.parseWhileExpression)
+	p.registerPrefix(token.DO, p.parseDoWhileExpression)
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
 	p.registerInfix(token.MINUS, p.parseInfixExpression)
@@ -468,6 +469,23 @@ func (p *Parser) parseWhileExpression() ast.Expression {
 		return nil
 	}
 	expression.Block = p.parseBlockStatement()
+	for p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+	return expression
+}
+
+func (p *Parser) parseDoWhileExpression() ast.Expression {
+	expression := &ast.DoWhileExpression{Token: p.curToken}
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	expression.Block = p.parseBlockStatement()
+	if !p.expectPeek(token.WHILE) {
+		return nil
+	}
+	p.nextToken()
+	expression.Condition = p.parseExpression(LOWEST)
 	for p.peekTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}

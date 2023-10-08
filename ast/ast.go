@@ -265,10 +265,29 @@ func (we *WhileExpression) TokenLiteral() string { return we.Token.Literal }
 func (we *WhileExpression) String() string {
 	var out bytes.Buffer
 	out.WriteString(we.Token.Literal)
-	out.WriteString(" ")
+	out.WriteString(" { ")
 	out.WriteString(we.Condition.String())
-	out.WriteString(" ")
+	out.WriteString(" } ")
 	out.WriteString(we.Block.String())
+	return out.String()
+}
+
+type DoWhileExpression struct {
+	Token     token.Token
+	Condition Expression
+	Block     *BlockStatement
+}
+
+func (we *DoWhileExpression) expressionNode()      {}
+func (we *DoWhileExpression) TokenLiteral() string { return we.Token.Literal }
+func (we *DoWhileExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString(we.Token.Literal)
+	out.WriteString(" { ")
+	out.WriteString(we.Block.String())
+	out.WriteString(" } while (")
+	out.WriteString(we.Condition.String())
+	out.WriteString(")")
 	return out.String()
 }
 
