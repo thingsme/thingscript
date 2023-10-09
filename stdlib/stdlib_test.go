@@ -44,17 +44,6 @@ func checkBoolean(t *testing.T, obj object.Object, expect bool) {
 	}
 }
 
-func checkString(t *testing.T, obj object.Object, expect string) {
-	t.Helper()
-	strObj, ok := obj.(*object.String)
-	if !ok {
-		t.Errorf("obj is not an integer object, got=%T", obj)
-	}
-	if strObj.Value != expect {
-		t.Errorf("integer different, expect %s, got=%s", expect, strObj.Value)
-	}
-}
-
 func checkIntegerArray(t *testing.T, obj object.Object, expectArr []int64) {
 	t.Helper()
 	arrObj, ok := obj.(*object.Array)
@@ -77,10 +66,38 @@ func checkIntegerArray(t *testing.T, obj object.Object, expectArr []int64) {
 	}
 }
 
+func TestUndefinedMemberError(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{`v := 10; v.undefined(1)`, `function "undefined" not found in "$integer"`},
+		{`v := 12.3; v.undefined(1)`, `function "undefined" not found in "$float"`},
+		{`v := "1234"; v.undefined(1)`, `function "undefined" not found in "$string"`},
+		{`v := true; v.undefined(1)`, `function "undefined" not found in "$boolean"`},
+		{`v := [1,2]; v.undefined(1)`, `function "undefined" not found in "$array"`},
+		{`v := {"a":1,"b":2.3}; v.undefined(1)`, `function "undefined" not found in "$hashmap"`},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := parser.New(l)
+		program := p.ParseProgram()
+		env := object.NewEnvironment()
+		env.RegisterPackages(Packages()...)
+		ret := eval.Eval(program, env)
+		if obj, ok := ret.(*object.Error); !ok {
+			t.Errorf("Result not error, got=%T (%+v)", ret, ret)
+		} else if obj.Message != tt.expected {
+			t.Errorf("Result fail; got=%s <= %s", obj.Message, tt.input)
+		}
+	}
+}
+
 func TestType(t *testing.T) {
 	tests := []string{
 		`v := 10; v.type == "integer"`,
 		`v := 12.3; v.type == "float"`,
+		`v := "1234"; v.type == "string"`,
 		`v := true; v.type == "boolean"`,
 		`v := [1,2]; v.type == "array"`,
 		`v := {"a":1,"b":2.3}; v.type == "hashmap"`,
@@ -98,57 +115,83 @@ func TestType(t *testing.T) {
 			t.Error("Result fail <= ", tt)
 		}
 	}
-	// string
-	str := &object.String{Value: "1234"}
-	sp := &strings{}
-	strType := sp.Member("type")(str)
-	checkString(t, strType, "string")
+}
 
-	// array
-	arr := &object.Array{Elements: []object.Object{
-		&object.Integer{Value: 1},
-		&object.Integer{Value: 2},
-		&object.Integer{Value: 3},
-	}}
-	ap := &arrays{}
-	arrType := ap.Member("type")(arr)
-	checkString(t, arrType, "array")
-
-	// hashmap
-	hash := &object.HashMap{
-		Pairs: map[object.HashKey]object.HashPair{
-			(&object.Integer{Value: 1}).HashKey(): {Key: &object.Integer{Value: 1}, Value: &object.Integer{Value: 2}},
-		}}
-	hp := &hashmap{}
-	hashType := hp.Member("type")(hash)
-	checkString(t, hashType, "hashmap")
+func TestTypeError(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{`v := 10; v.type(1)`, "wrong number of arguments. got=1, want=0"},
+		{`v := 12.3; v.type(1)`, "wrong number of arguments. got=1, want=0"},
+		{`v := "1234"; v.type(1)`, "wrong number of arguments. got=1, want=0"},
+		{`v := true; v.type(1)`, "wrong number of arguments. got=1, want=0"},
+		{`v := [1,2,3]; v.type(1)`, "wrong number of arguments. got=1, want=0"},
+		{`v := [1,2,3]; v.head(1)`, "wrong number of arguments. got=1, want=0"},
+		{`v := [1,2,3]; v.tail(1)`, "wrong number of arguments. got=1, want=0"},
+		{`v := [1,2,3]; v.init(1)`, "wrong number of arguments. got=1, want=0"},
+		{`v := [1,2,3]; v.last(1)`, "wrong number of arguments. got=1, want=0"},
+		{`v := {"a":1,"b":2.3}; v.type(1)`, "wrong number of arguments. got=1, want=0"},
+		{`v := {"a":1,"b":2.3}; v.head(1)`, "function \"head\" not found in \"$hashmap\""},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := parser.New(l)
+		program := p.ParseProgram()
+		env := object.NewEnvironment()
+		env.RegisterPackages(Packages()...)
+		ret := eval.Eval(program, env)
+		if obj, ok := ret.(*object.Error); !ok {
+			t.Errorf("Result not error, got=%T (%+v)", ret, ret)
+		} else if obj.Message != tt.expected {
+			t.Errorf("Result fail got=%q <= %s", obj.Message, tt.input)
+		}
+	}
 }
 
 func TestLength(t *testing.T) {
-	// string
-	str := &object.String{Value: "1234"}
-	sp := &strings{}
-	strLen := sp.Member("length")(str)
-	checkInteger(t, strLen, 4)
+	tests := []string{
+		`v := "1234"; v.length == 4`,
+		`v := [1,2]; v.length == 2`,
+		`v := {"a":1,"b":2.3}; v.length == 2`,
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt)
+		p := parser.New(l)
+		program := p.ParseProgram()
+		env := object.NewEnvironment()
+		env.RegisterPackages(Packages()...)
+		ret := eval.Eval(program, env)
+		if b, ok := ret.(*object.Boolean); !ok {
+			t.Errorf("Result not boolean, got=%T (%+v)", ret, ret)
+		} else if !b.Value {
+			t.Error("Result fail <= ", tt)
+		}
+	}
+}
 
-	// array
-	arr := &object.Array{Elements: []object.Object{
-		&object.Integer{Value: 1},
-		&object.Integer{Value: 2},
-		&object.Integer{Value: 3},
-	}}
-	ap := &arrays{}
-	arrLen := ap.Member("length")(arr)
-	checkInteger(t, arrLen, 3)
-
-	// hashmap
-	hash := &object.HashMap{
-		Pairs: map[object.HashKey]object.HashPair{
-			(&object.Integer{Value: 1}).HashKey(): {Key: &object.Integer{Value: 1}, Value: &object.Integer{Value: 2}},
-		}}
-	hp := &hashmap{}
-	mapLen := hp.Member("length")(hash)
-	checkInteger(t, mapLen, 1)
+func TestLengthError(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{`v := "1234"; v.length(1)`, "wrong number of arguments. got=1, want=0"},
+		{`v := [1,2]; v.length(1)`, "wrong number of arguments. got=1, want=0"},
+		{`v := {"a":1,"b":2.3}; v.length(1)`, "wrong number of arguments. got=1, want=0"},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := parser.New(l)
+		program := p.ParseProgram()
+		env := object.NewEnvironment()
+		env.RegisterPackages(Packages()...)
+		ret := eval.Eval(program, env)
+		if obj, ok := ret.(*object.Error); !ok {
+			t.Errorf("Result not error, got=%T (%+v)", ret, ret)
+		} else if obj.Message != tt.expected {
+			t.Error("Result fail <= ", tt)
+		}
+	}
 }
 
 func TestPush(t *testing.T) {
