@@ -180,6 +180,8 @@ func TestFunctions(t *testing.T) {
 		{`[1,2,3].init[0]`, 1},
 		{`[1,2,3].init()[1]`, 2},
 		{`[1,2,3].init[1]`, 2},
+		{`sum := 0; [1,2,3].foreach(func(idx,elm){ sum += elm}); sum`, 6},
+		{`sum := ""; ["1","2","3"].foreach(func(idx,elm){ sum += elm}); sum`, "123"},
 		{`func arr(){return [1,2,3]}; arr().head()`, 1},
 		{`func arr(){return [1,2,3]}; arr().head`, 1},
 		{`func arr(){return [1,2,3]}; arr().last()`, 3},
@@ -192,13 +194,19 @@ func TestFunctions(t *testing.T) {
 		case int:
 			checkInteger(t, evaluated, int64(expected))
 		case string:
-			errObj, ok := evaluated.(*object.Error)
-			if !ok {
+			switch obj := evaluated.(type) {
+			case *object.String:
+				if obj.Value != expected {
+					t.Errorf("wrong string. expected=%q, got=%q",
+						expected, obj.Value)
+				}
+			case *object.Error:
+				if obj.Message != expected {
+					t.Errorf("wrong error message. expected=%q, got=%q",
+						expected, obj.Message)
+				}
+			default:
 				t.Errorf("object is not Error. got=%T (%+v) <= %s", evaluated, evaluated, tt.input)
-			}
-			if errObj.Message != expected {
-				t.Errorf("wrong error message. expected=%q, got=%q",
-					expected, errObj.Message)
 			}
 		}
 	}

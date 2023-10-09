@@ -82,26 +82,29 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.BreakStatement:
 		return &object.Break{}
 	case *ast.AssignStatement:
-		_, ok := env.Get(node.Name.Value)
+		val, ok := env.Get(node.Name.Value)
 		if !ok {
 			return newError("identifier not found: %s", node.Name.Value)
 		}
-		val := Eval(node.Value, env)
-		env.Set(node.Name.Value, val)
+		evaluated := Eval(node.Value, env)
+		if isError(evaluated) {
+			return evaluated
+		}
+		return apply(val, evaluated)
 	case *ast.OperAssignStatement:
-		left := Eval(node.Name, env)
-		if isError(left) {
-			return left
+		left, ok := env.Get(node.Name.Value)
+		if !ok {
+			return newError("identifier not found: %s", node.Name.Value)
 		}
 		right := Eval(node.Value, env)
 		if isError(right) {
 			return right
 		}
-		result := evalInfixExpression(node.Operator, left, right)
-		if isError(right) {
-			return right
+		evaluated := evalInfixExpression(node.Operator, left, right)
+		if isError(evaluated) {
+			return evaluated
 		}
-		env.Set(node.Name.Value, result)
+		return apply(left, evaluated)
 	case *ast.PrefixExpression:
 		right := Eval(node.Right, env)
 		if isError(right) {
@@ -222,6 +225,45 @@ func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Ob
 		result = append(result, evaluated)
 	}
 	return result
+}
+
+func apply(left object.Object, right object.Object) object.Object {
+	switch lv := left.(type) {
+	case *object.Integer:
+		switch rv := right.(type) {
+		case *object.Integer:
+			lv.Value = rv.Value
+			return nil
+		}
+	case *object.Float:
+		switch rv := right.(type) {
+		case *object.Integer:
+			lv.Value = float64(rv.Value)
+			return nil
+		case *object.Float:
+			lv.Value = rv.Value
+			return nil
+		}
+	case *object.Boolean:
+		switch rv := right.(type) {
+		case *object.Boolean:
+			lv.Value = rv.Value
+			return nil
+		}
+	case *object.String:
+		switch rv := right.(type) {
+		case *object.String:
+			lv.Value = rv.Value
+			return nil
+		}
+	case *object.Array:
+		switch rv := right.(type) {
+		case *object.Array:
+			lv.Elements = rv.Elements
+			return nil
+		}
+	}
+	return object.Errorf("unable to update value of %T with %T", left, right)
 }
 
 func applyFunction(fn object.Object, args []object.Object) object.Object {

@@ -1,6 +1,7 @@
 package stdlib
 
 import (
+	"github.com/thingsme/thingscript/eval"
 	"github.com/thingsme/thingscript/object"
 	"github.com/thingsme/thingscript/stdlib/fmt"
 )
@@ -192,6 +193,31 @@ func (sp *arrays) Member(member string) func(object.Object, ...object.Object) ob
 			arr := receiver.(*object.Array)
 			if len(arr.Elements) > 0 {
 				return arr.Elements[len(arr.Elements)-1]
+			}
+			return nil
+		}
+	case "foreach":
+		return func(receiver object.Object, args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return object.Errorf("wrong number of arguments. got=%d, want=1", len(args))
+			}
+			fn := args[0].(*object.Function)
+			if len(fn.Parameters) != 2 {
+				return object.Errorf("wrong number of arguments. got=%d, want=2", len(fn.Parameters))
+			}
+			arr := receiver.(*object.Array)
+			for i, elm := range arr.Elements {
+				env := object.NewEnclosedEnvironment(fn.Env)
+				env.Set(fn.Parameters[0].Value, &object.Integer{Value: int64(i)})
+				env.Set(fn.Parameters[1].Value, elm)
+				ret := eval.Eval(fn.Body, env)
+				if ret != nil {
+					if ret.Type() == object.ERROR_OBJ {
+						return ret
+					} else if ret.Type() == object.BREAK_OBJ {
+						break
+					}
+				}
 			}
 			return nil
 		}

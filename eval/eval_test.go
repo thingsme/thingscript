@@ -1,11 +1,11 @@
-package eval
+package eval_test
 
 import (
 	"bytes"
+	gofmt "fmt"
 	"testing"
 
-	gofmt "fmt"
-
+	"github.com/thingsme/thingscript/eval"
 	"github.com/thingsme/thingscript/lexer"
 	"github.com/thingsme/thingscript/object"
 	"github.com/thingsme/thingscript/parser"
@@ -22,7 +22,7 @@ func testEval(input string) object.Object {
 	}
 	env := object.NewEnvironment()
 	env.RegisterPackages(stdlib.Packages()...)
-	return Eval(program, env)
+	return eval.Eval(program, env)
 }
 
 func TestEvalIntegerExpression(t *testing.T) {
@@ -106,7 +106,7 @@ func testFloatObject(t *testing.T, obj object.Object, expected float64) bool {
 }
 
 func testNullObject(t *testing.T, obj object.Object) bool {
-	if obj != NULL {
+	if obj != eval.NULL {
 		t.Errorf("object is not NULL. got=%T (%+v)", obj, obj)
 		return false
 	}
@@ -307,8 +307,8 @@ func TestHashLiterals(t *testing.T) {
 		(&object.String{Value: "two"}).HashKey():   2,
 		(&object.String{Value: "three"}).HashKey(): 3,
 		(&object.Integer{Value: 4}).HashKey():      4,
-		TRUE.HashKey():                             5,
-		FALSE.HashKey():                            6,
+		eval.TRUE.HashKey():                        5,
+		eval.FALSE.HashKey():                       6,
 	}
 	if len(result.Pairs) != len(expected) {
 		t.Fatalf("Hash has wrong num of pairs. got=%d", len(result.Pairs))
@@ -671,7 +671,7 @@ func TestImports(t *testing.T) {
 		env := object.NewEnvironment()
 		out := &bytes.Buffer{}
 		env.RegisterPackages(fmt.New(fmt.WithWriter(out)))
-		ret := Eval(program, env)
+		ret := eval.Eval(program, env)
 		if ret != nil && ret.Type() == object.ERROR_OBJ {
 			t.Errorf("result is error; %s", ret.Inspect())
 		}
