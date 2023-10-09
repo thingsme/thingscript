@@ -152,6 +152,9 @@ func (p *Parser) ParseProgram() *ast.Program {
 			program.Statements = append(program.Statements, stmt)
 		}
 		p.nextToken()
+		for p.curTokenIs(token.SEMICOLON) {
+			p.nextToken()
+		}
 	}
 	return program
 }
@@ -534,6 +537,9 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
 		return nil
 	}
 	lit.Body = p.parseBlockStatement()
+	for p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
 	return lit
 }
 
@@ -561,6 +567,9 @@ func (p *Parser) parseFunctionParameters() []*ast.Identifier {
 func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 	exp := &ast.CallExpression{Token: p.curToken, Function: function}
 	exp.Arguments = p.parseExpressionList(token.RPAREN)
+	for p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
 	return exp
 }
 

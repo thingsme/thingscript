@@ -3,6 +3,14 @@
 ThingScript is a script interpreter that implemented in Go without zero dependency.
 It can be embedded in your Go application as a library.
 
+## Hello World
+
+```go
+out := import("fmt")
+name := "World"
+out.println("Hello", name, "?")
+```
+
 ## Data Types
 
 ### STRING
@@ -43,7 +51,19 @@ var f1 = 3.14
 zero := 0.0
 ```
 
-## Control flow
+### ARRAY
+
+```go
+var arr = [ 0, 1, true, "hello world"]
+```
+
+### MAP
+
+```go
+var tbl = { "key1": 0, "key2": 1, "key3": true, "key4": "hello world"}
+```
+
+## Control Flow
 
 ### IF-ELSE
 
@@ -54,6 +74,45 @@ var m = 20
 max := if n > m { n } else { m }
 ```
 
+### WHILE
+
+```go
+var n = 0
+var sum = 0
+while n < 10 {
+    sum += n
+    n += 1
+}
+```
+
+### DO-WHILE
+
+```go
+var n = 0
+var sum = 0
+do {
+    sum += n
+    n += 1
+} while n < 10;
+```
+
+### FOREACH
+
+```go
+sum := 0
+[1,2,3].foreach(func(idx,elm){
+    sum += elm
+})
+// sum = 6
+```
+
+```go
+sum := ""
+["1","2","3"].foreach(func(idx,elm){
+    sum += elm
+})
+// sum = "123"
+```
 ### Function
 
 ```go

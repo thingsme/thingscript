@@ -1,11 +1,11 @@
-package eval
+package eval_test
 
 import (
 	"bytes"
+	gofmt "fmt"
 	"testing"
 
-	gofmt "fmt"
-
+	"github.com/thingsme/thingscript/eval"
 	"github.com/thingsme/thingscript/lexer"
 	"github.com/thingsme/thingscript/object"
 	"github.com/thingsme/thingscript/parser"
@@ -22,7 +22,7 @@ func testEval(input string) object.Object {
 	}
 	env := object.NewEnvironment()
 	env.RegisterPackages(stdlib.Packages()...)
-	return Eval(program, env)
+	return eval.Eval(program, env)
 }
 
 func TestEvalIntegerExpression(t *testing.T) {
@@ -66,6 +66,17 @@ func testIntegerObject(t *testing.T, obj object.Object, expected int64) bool {
 	return true
 }
 
+func checkBoolean(t *testing.T, obj object.Object, expect bool) {
+	t.Helper()
+	boolObj, ok := obj.(*object.Boolean)
+	if !ok {
+		t.Errorf("obj is not an integer object, got=%T", obj)
+	}
+	if boolObj.Value != expect {
+		t.Errorf("boolean different, expect %t, got=%t", expect, boolObj.Value)
+	}
+}
+
 func TestEvalFloatExpression(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -106,7 +117,7 @@ func testFloatObject(t *testing.T, obj object.Object, expected float64) bool {
 }
 
 func testNullObject(t *testing.T, obj object.Object) bool {
-	if obj != NULL {
+	if obj != eval.NULL {
 		t.Errorf("object is not NULL. got=%T (%+v)", obj, obj)
 		return false
 	}
@@ -298,7 +309,7 @@ func TestHashLiterals(t *testing.T) {
 	}
 	`
 	evaluated := testEval(input)
-	result, ok := evaluated.(*object.Hash)
+	result, ok := evaluated.(*object.HashMap)
 	if !ok {
 		t.Fatalf("Eval didn't return Hash. got=%T (%+v)", evaluated, evaluated)
 	}
@@ -307,8 +318,8 @@ func TestHashLiterals(t *testing.T) {
 		(&object.String{Value: "two"}).HashKey():   2,
 		(&object.String{Value: "three"}).HashKey(): 3,
 		(&object.Integer{Value: 4}).HashKey():      4,
-		TRUE.HashKey():                             5,
-		FALSE.HashKey():                            6,
+		eval.TRUE.HashKey():                        5,
+		eval.FALSE.HashKey():                       6,
 	}
 	if len(result.Pairs) != len(expected) {
 		t.Fatalf("Hash has wrong num of pairs. got=%d", len(result.Pairs))
@@ -472,7 +483,7 @@ func TestVarStatement(t *testing.T) {
 		{"v := 10; v -= 10; v", 0},
 		{"v := 12; v %= 10; v", 2},
 		{"v := 13; v = v % 10; v", 3},
-		{"v := 10.0; func m() { return 10.2}; v *= m(); v", 102.0},
+		{"v := 10.0;  func m() { return 10.2 };  v *= m(); v", 102.0},
 		{"v := 100.0; v = v / 10.0; func m() { return 10.2}; v *= m(); v", 102.0},
 		{"v := 103.0; v /= 10.3; v", 10.0},
 	}
@@ -596,6 +607,9 @@ func TestBuiltinFunction(t *testing.T) {
 		{`[1,2,3].init().length()`, 2},
 		{`[1,2,3].init()[0]`, 1},
 		{`[1,2,3].init()[1]`, 2},
+		{`sum := 0; [1,2,3].foreach(func(idx,elm){ sum += elm}); sum`, 6},
+		{`sum := ""; ["1","2","3"].foreach(func(idx,elm){ sum += elm}); sum`, "123"},
+		{`ret := true; [true, true, false].foreach(func(idx,elm){ ret = elm }); ret`, false},
 		{`func arr(){return [1,2,3]}; arr().head()`, 1},
 		{`func arr(){return [1,2,3]}; arr().last()`, 3},
 		{`var b = [1,2,3].push(4); b[3]`, 4},
@@ -607,14 +621,22 @@ func TestBuiltinFunction(t *testing.T) {
 		switch expected := tt.expected.(type) {
 		case int:
 			testIntegerObject(t, evaluated, int64(expected))
+		case bool:
+			checkBoolean(t, evaluated, expected)
 		case string:
-			errObj, ok := evaluated.(*object.Error)
-			if !ok {
+			switch obj := evaluated.(type) {
+			case *object.String:
+				if obj.Value != expected {
+					t.Errorf("wrong string. expected=%q, got=%q",
+						expected, obj.Value)
+				}
+			case *object.Error:
+				if obj.Message != expected {
+					t.Errorf("wrong error message. expected=%q, got=%q",
+						expected, obj.Message)
+				}
+			default:
 				t.Errorf("object is not Error. got=%T (%+v) <= %s", evaluated, evaluated, tt.input)
-			}
-			if errObj.Message != expected {
-				t.Errorf("wrong error message. expected=%q, got=%q",
-					expected, errObj.Message)
 			}
 		}
 	}
@@ -671,7 +693,7 @@ func TestImports(t *testing.T) {
 		env := object.NewEnvironment()
 		out := &bytes.Buffer{}
 		env.RegisterPackages(fmt.New(fmt.WithWriter(out)))
-		ret := Eval(program, env)
+		ret := eval.Eval(program, env)
 		if ret != nil && ret.Type() == object.ERROR_OBJ {
 			t.Errorf("result is error; %s", ret.Inspect())
 		}

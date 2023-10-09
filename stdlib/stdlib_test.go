@@ -1,6 +1,7 @@
-package arrays
+package stdlib
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/thingsme/thingscript/eval"
@@ -13,8 +14,11 @@ func testEval(input string) object.Object {
 	l := lexer.New(input)
 	p := parser.New(l)
 	program := p.ParseProgram()
+	for _, err := range p.Errors() {
+		fmt.Println("Parse Error:", err)
+	}
 	env := object.NewEnvironment()
-	env.RegisterPackages(New())
+	env.RegisterPackages(Packages()...)
 	return eval.Eval(program, env)
 }
 
@@ -26,6 +30,28 @@ func checkInteger(t *testing.T, obj object.Object, expect int64) {
 	}
 	if intObj.Value != expect {
 		t.Errorf("integer different, expect %d, got=%d", expect, intObj.Value)
+	}
+}
+
+func checkBoolean(t *testing.T, obj object.Object, expect bool) {
+	t.Helper()
+	boolObj, ok := obj.(*object.Boolean)
+	if !ok {
+		t.Errorf("obj is not an integer object, got=%T", obj)
+	}
+	if boolObj.Value != expect {
+		t.Errorf("boolean different, expect %t, got=%t", expect, boolObj.Value)
+	}
+}
+
+func checkString(t *testing.T, obj object.Object, expect string) {
+	t.Helper()
+	strObj, ok := obj.(*object.String)
+	if !ok {
+		t.Errorf("obj is not an integer object, got=%T", obj)
+	}
+	if strObj.Value != expect {
+		t.Errorf("integer different, expect %s, got=%s", expect, strObj.Value)
 	}
 }
 
@@ -51,15 +77,58 @@ func checkIntegerArray(t *testing.T, obj object.Object, expectArr []int64) {
 	}
 }
 
-func TestLen(t *testing.T) {
+func TestType(t *testing.T) {
+	// string
+	str := &object.String{Value: "1234"}
+	sp := &strings{}
+	strType := sp.Member("type")(str)
+	checkString(t, strType, "string")
+
+	// array
 	arr := &object.Array{Elements: []object.Object{
 		&object.Integer{Value: 1},
 		&object.Integer{Value: 2},
 		&object.Integer{Value: 3},
 	}}
-	ap := New()
+	ap := &arrays{}
+	arrType := ap.Member("type")(arr)
+	checkString(t, arrType, "array")
+
+	// hashmap
+	hash := &object.HashMap{
+		Pairs: map[object.HashKey]object.HashPair{
+			(&object.Integer{Value: 1}).HashKey(): {Key: &object.Integer{Value: 1}, Value: &object.Integer{Value: 2}},
+		}}
+	hp := &hashmap{}
+	hashType := hp.Member("type")(hash)
+	checkString(t, hashType, "hashmap")
+}
+
+func TestLength(t *testing.T) {
+	// string
+	str := &object.String{Value: "1234"}
+	sp := &strings{}
+	strLen := sp.Member("length")(str)
+	checkInteger(t, strLen, 4)
+
+	// array
+	arr := &object.Array{Elements: []object.Object{
+		&object.Integer{Value: 1},
+		&object.Integer{Value: 2},
+		&object.Integer{Value: 3},
+	}}
+	ap := &arrays{}
 	arrLen := ap.Member("length")(arr)
 	checkInteger(t, arrLen, 3)
+
+	// hashmap
+	hash := &object.HashMap{
+		Pairs: map[object.HashKey]object.HashPair{
+			(&object.Integer{Value: 1}).HashKey(): {Key: &object.Integer{Value: 1}, Value: &object.Integer{Value: 2}},
+		}}
+	hp := &hashmap{}
+	mapLen := hp.Member("length")(hash)
+	checkInteger(t, mapLen, 1)
 }
 
 func TestPush(t *testing.T) {
@@ -69,7 +138,7 @@ func TestPush(t *testing.T) {
 		&object.Integer{Value: 3},
 	}}
 
-	p := New()
+	p := &arrays{}
 	ret := p.Member("push")(arr, &object.Integer{Value: 4})
 	checkIntegerArray(t, ret, []int64{1, 2, 3, 4})
 }
@@ -80,7 +149,7 @@ func TestInitLast(t *testing.T) {
 		&object.Integer{Value: 2},
 		&object.Integer{Value: 3},
 	}}
-	p := New()
+	p := &arrays{}
 	initRet := p.Member("init")(arr)
 	lastRet := p.Member("last")(arr)
 
@@ -94,7 +163,7 @@ func TestHeadTail(t *testing.T) {
 		&object.Integer{Value: 2},
 		&object.Integer{Value: 3},
 	}}
-	p := New()
+	p := &arrays{}
 	headRet := p.Member("head")(arr)
 	tailRet := p.Member("tail")(arr)
 
@@ -126,6 +195,9 @@ func TestFunctions(t *testing.T) {
 		{`[1,2,3].init[0]`, 1},
 		{`[1,2,3].init()[1]`, 2},
 		{`[1,2,3].init[1]`, 2},
+		{`sum := 0; [1,2,3].foreach(func(idx,elm){ sum += elm}); sum`, 6},
+		{`sum := ""; ["1","2","3"].foreach(func(idx,elm){ sum += elm}); sum`, "123"},
+		{`ret := true; [true, true, false].foreach(func(idx,elm){ ret = elm }); ret`, false},
 		{`func arr(){return [1,2,3]}; arr().head()`, 1},
 		{`func arr(){return [1,2,3]}; arr().head`, 1},
 		{`func arr(){return [1,2,3]}; arr().last()`, 3},
@@ -137,14 +209,22 @@ func TestFunctions(t *testing.T) {
 		switch expected := tt.expected.(type) {
 		case int:
 			checkInteger(t, evaluated, int64(expected))
+		case bool:
+			checkBoolean(t, evaluated, expected)
 		case string:
-			errObj, ok := evaluated.(*object.Error)
-			if !ok {
+			switch obj := evaluated.(type) {
+			case *object.String:
+				if obj.Value != expected {
+					t.Errorf("wrong string. expected=%q, got=%q",
+						expected, obj.Value)
+				}
+			case *object.Error:
+				if obj.Message != expected {
+					t.Errorf("wrong error message. expected=%q, got=%q",
+						expected, obj.Message)
+				}
+			default:
 				t.Errorf("object is not Error. got=%T (%+v) <= %s", evaluated, evaluated, tt.input)
-			}
-			if errObj.Message != expected {
-				t.Errorf("wrong error message. expected=%q, got=%q",
-					expected, errObj.Message)
 			}
 		}
 	}

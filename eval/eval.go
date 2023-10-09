@@ -1,8 +1,6 @@
 package eval
 
 import (
-	"fmt"
-
 	"github.com/thingsme/thingscript/ast"
 	"github.com/thingsme/thingscript/object"
 )
@@ -26,10 +24,6 @@ func nativeBoolToBooleanObject(input bool) *object.Boolean {
 		return TRUE
 	}
 	return FALSE
-}
-
-func newError(format string, args ...any) *object.Error {
-	return &object.Error{Message: fmt.Sprintf(format, args...)}
 }
 
 func isError(obj object.Object) bool {
@@ -82,26 +76,29 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.BreakStatement:
 		return &object.Break{}
 	case *ast.AssignStatement:
-		_, ok := env.Get(node.Name.Value)
+		val, ok := env.Get(node.Name.Value)
 		if !ok {
-			return newError("identifier not found: %s", node.Name.Value)
+			return object.Errorf("identifier not found: %s", node.Name.Value)
 		}
-		val := Eval(node.Value, env)
-		env.Set(node.Name.Value, val)
+		evaluated := Eval(node.Value, env)
+		if isError(evaluated) {
+			return evaluated
+		}
+		return apply(val, evaluated)
 	case *ast.OperAssignStatement:
-		left := Eval(node.Name, env)
-		if isError(left) {
-			return left
+		left, ok := env.Get(node.Name.Value)
+		if !ok {
+			return object.Errorf("identifier not found: %s", node.Name.Value)
 		}
 		right := Eval(node.Value, env)
 		if isError(right) {
 			return right
 		}
-		result := evalInfixExpression(node.Operator, left, right)
-		if isError(right) {
-			return right
+		evaluated := evalInfixExpression(node.Operator, left, right)
+		if isError(evaluated) {
+			return evaluated
 		}
-		env.Set(node.Name.Value, result)
+		return apply(left, evaluated)
 	case *ast.PrefixExpression:
 		right := Eval(node.Right, env)
 		if isError(right) {
@@ -224,6 +221,45 @@ func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Ob
 	return result
 }
 
+func apply(left object.Object, right object.Object) object.Object {
+	switch lv := left.(type) {
+	case *object.Integer:
+		switch rv := right.(type) {
+		case *object.Integer:
+			lv.Value = rv.Value
+			return nil
+		}
+	case *object.Float:
+		switch rv := right.(type) {
+		case *object.Integer:
+			lv.Value = float64(rv.Value)
+			return nil
+		case *object.Float:
+			lv.Value = rv.Value
+			return nil
+		}
+	case *object.Boolean:
+		switch rv := right.(type) {
+		case *object.Boolean:
+			lv.Value = rv.Value
+			return nil
+		}
+	case *object.String:
+		switch rv := right.(type) {
+		case *object.String:
+			lv.Value = rv.Value
+			return nil
+		}
+	case *object.Array:
+		switch rv := right.(type) {
+		case *object.Array:
+			lv.Elements = rv.Elements
+			return nil
+		}
+	}
+	return object.Errorf("unable to update value of %T with %T", left, right)
+}
+
 func applyFunction(fn object.Object, args []object.Object) object.Object {
 	switch fn := fn.(type) {
 	case *object.Function:
@@ -236,7 +272,7 @@ func applyFunction(fn object.Object, args []object.Object) object.Object {
 		}
 		return NULL
 	default:
-		return newError("not a function: %s", fn.Type())
+		return object.Errorf("not a function: %s", fn.Type())
 	}
 }
 
@@ -247,45 +283,35 @@ func evalAccessExpression(exp *ast.AccessExpression, env *object.Environment) ob
 	}
 
 	var pkg object.Package
-	var ok bool
-	switch lvalue := left.(type) {
-	case *object.String:
-		pkg, _ = env.Import("$string")
-	case *object.Array:
-		pkg, _ = env.Import("$array")
-	case *object.Hash:
-		pkg, _ = env.Import("$hash")
-	case *object.Import:
-		pkg, ok = env.Import(lvalue.Name)
-		if !ok {
-			return newError("package not found %q", lvalue.Name)
-		}
-	default:
-		return newError("package not found for %T", left)
+	if pkgname, ok := object.PackageName(left); ok {
+		pkg, _ = env.Import(pkgname)
+	}
+	if pkg == nil {
+		return object.Errorf("package not found for %T (%+v)", left, left)
 	}
 
 	switch r := exp.Right.(type) {
 	case *ast.Identifier:
 		fn := pkg.Member(r.Value)
 		if fn == nil {
-			return newError("function %q not found in %q", r.Value, pkg.Name())
+			return object.Errorf("function %q not found in %q", r.Value, pkg.Name())
 		}
 		ret := fn(left)
 		return ret
 	case *ast.CallExpression:
 		fnIdent, ok := r.Function.(*ast.Identifier)
 		if !ok {
-			return newError("undefined %q in %q", r.Function.String(), pkg.Name())
+			return object.Errorf("undefined %q in %q", r.Function.String(), pkg.Name())
 		}
 		fn := pkg.Member(fnIdent.Value)
 		if fn == nil {
-			return newError("function %q not found in %q", fnIdent.Value, pkg.Name())
+			return object.Errorf("function %q not found in %q", fnIdent.Value, pkg.Name())
 		}
 		args := evalExpressions(r.Arguments, env)
 		ret := fn(left, args...)
 		return ret
 	default:
-		return newError("invalid access operator %q.(%T)", pkg.Name(), r)
+		return object.Errorf("invalid access operator %q.(%T)", pkg.Name(), r)
 	}
 }
 
@@ -373,10 +399,10 @@ func evalIndexExpression(left object.Object, index object.Object) object.Object 
 	switch {
 	case left.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
 		return evalArrayIndexExpression(left, index)
-	case left.Type() == object.HASH_OBJ:
+	case left.Type() == object.HASHMAP_OBJ:
 		return evalHashIndexExpression(left, index)
 	default:
-		return newError("index operation not supported: %s", left.Type())
+		return object.Errorf("index operation not supported: %s", left.Type())
 	}
 }
 
@@ -391,10 +417,10 @@ func evalArrayIndexExpression(array object.Object, index object.Object) object.O
 }
 
 func evalHashIndexExpression(hash object.Object, index object.Object) object.Object {
-	hashObject := hash.(*object.Hash)
+	hashObject := hash.(*object.HashMap)
 	key, ok := index.(object.Hashable)
 	if !ok {
-		return newError("unusable as hash key: %s", index.Type())
+		return object.Errorf("unusable as hash key: %s", index.Type())
 	}
 	pair, ok := hashObject.Pairs[key.HashKey()]
 	if !ok {
@@ -412,7 +438,7 @@ func evalHashLiteral(node *ast.HashLiteral, env *object.Environment) object.Obje
 		}
 		hashKey, ok := key.(object.Hashable)
 		if !ok {
-			return newError("unusable as hash key: %s", key.Type())
+			return object.Errorf("unusable as hash key: %s", key.Type())
 		}
 		value := Eval(valueNode, env)
 		if isError(value) {
@@ -422,7 +448,7 @@ func evalHashLiteral(node *ast.HashLiteral, env *object.Environment) object.Obje
 		hashed := hashKey.HashKey()
 		pairs[hashed] = object.HashPair{Key: key, Value: value}
 	}
-	return &object.Hash{Pairs: pairs}
+	return &object.HashMap{Pairs: pairs}
 }
 
 func evalBangOperatorExpression(right object.Object) object.Object {
@@ -450,7 +476,7 @@ func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object
 		return builtin
 	}
 
-	return newError("identifier not found: " + node.Value)
+	return object.Errorf("identifier not found: " + node.Value)
 }
 
 func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
@@ -462,7 +488,7 @@ func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
 		value := right.(*object.Float).Value
 		return &object.Float{Value: value * -1}
 	default:
-		return newError("unknown operator: -%s", right.Type())
+		return object.Errorf("unknown operator: -%s", right.Type())
 	}
 }
 
@@ -473,7 +499,7 @@ func evalPrefixExpression(operator string, right object.Object) object.Object {
 	case "-":
 		return evalMinusPrefixOperatorExpression(right)
 	default:
-		return newError("unknown operator: %s%s", operator, right.Type())
+		return object.Errorf("unknown operator: %s%s", operator, right.Type())
 	}
 }
 
@@ -490,9 +516,9 @@ func evalInfixExpression(operator string, left object.Object, right object.Objec
 	case operator == "!=":
 		return nativeBoolToBooleanObject(left != right)
 	case left.Type() != right.Type():
-		return newError("type mismatch: %s %s %s", left.Type(), operator, right.Type())
+		return object.Errorf("type mismatch: %s %s %s", left.Type(), operator, right.Type())
 	default:
-		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return object.Errorf("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 
@@ -519,7 +545,7 @@ func evalIntegerInfixExpression(operator string, left object.Object, right objec
 	case "!=":
 		return nativeBoolToBooleanObject(leftVal != rightVal)
 	default:
-		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return object.Errorf("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 
@@ -544,13 +570,13 @@ func evalFloatInfixExpression(operator string, left object.Object, right object.
 	case "!=":
 		return nativeBoolToBooleanObject(leftVal != rightVal)
 	default:
-		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return object.Errorf("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 
 func evalStringInfixExpression(operator string, left object.Object, right object.Object) object.Object {
 	if operator != "+" {
-		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return object.Errorf("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 	leftVal := left.(*object.String).Value
 	rightVal := right.(*object.String).Value
