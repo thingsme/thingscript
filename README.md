@@ -96,6 +96,23 @@ do {
 } while n < 10;
 ```
 
+### FOREACH
+
+```go
+sum := 0
+[1,2,3].foreach(func(idx,elm){
+    sum += elm
+})
+// sum = 6
+```
+
+```go
+sum := ""
+["1","2","3"].foreach(func(idx,elm){
+    sum += elm
+})
+// sum = "123"
+```
 ### Function
 
 ```go
