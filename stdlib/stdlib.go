@@ -3,18 +3,17 @@ package stdlib
 import (
 	"github.com/thingsme/thingscript/eval"
 	"github.com/thingsme/thingscript/object"
-	"github.com/thingsme/thingscript/stdlib/fmt"
 )
 
 func Packages() []object.Package {
 	return []object.Package{
-		fmt.New(),
 		&integers{},
 		&floats{},
 		&booleans{},
 		&strings{},
 		&arrays{},
 		&hashmap{},
+		FmtPackage(),
 	}
 }
 

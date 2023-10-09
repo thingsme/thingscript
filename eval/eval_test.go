@@ -10,7 +10,6 @@ import (
 	"github.com/thingsme/thingscript/object"
 	"github.com/thingsme/thingscript/parser"
 	"github.com/thingsme/thingscript/stdlib"
-	"github.com/thingsme/thingscript/stdlib/fmt"
 )
 
 func testEval(input string) object.Object {
@@ -730,7 +729,7 @@ func TestImports(t *testing.T) {
 		program := p.ParseProgram()
 		env := object.NewEnvironment()
 		out := &bytes.Buffer{}
-		env.RegisterPackages(fmt.New(fmt.WithWriter(out)))
+		env.RegisterPackages(stdlib.FmtPackage(stdlib.WithWriter(out)))
 		ret := eval.Eval(program, env)
 		if ret != nil && ret.Type() == object.ERROR_OBJ {
 			t.Errorf("result is error; %s", ret.Inspect())

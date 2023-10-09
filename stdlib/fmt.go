@@ -1,4 +1,4 @@
-package fmt
+package stdlib
 
 import (
 	"fmt"
@@ -8,8 +8,10 @@ import (
 	"github.com/thingsme/thingscript/object"
 )
 
-func New(opts ...Option) object.Package {
-	ret := &pkg{
+type Option func(p any)
+
+func FmtPackage(opts ...Option) object.Package {
+	ret := &fmtPkg{
 		out: os.Stdout,
 	}
 	for _, o := range opts {
@@ -19,28 +21,37 @@ func New(opts ...Option) object.Package {
 }
 
 func WithWriter(w io.Writer) Option {
-	return func(p *pkg) {
-		p.out = w
+	return func(pkg any) {
+		if p, ok := pkg.(*fmtPkg); ok {
+			p.out = w
+		}
 	}
 }
 
-type Option func(p *pkg)
-
-type pkg struct {
+type fmtPkg struct {
 	out io.Writer
 }
 
-func (fp *pkg) Name() string {
+func (fp *fmtPkg) Name() string {
 	return "fmt"
 }
 
-func (fp *pkg) Member(member string) func(object.Object, ...object.Object) object.Object {
+func (fp *fmtPkg) Member(member string) func(object.Object, ...object.Object) object.Object {
 	switch member {
 	case "println":
 		return func(receiver object.Object, args ...object.Object) object.Object {
 			params := make([]any, len(args))
 			for i, a := range args {
-				params[i] = a.Inspect()
+				switch raw := a.(type) {
+				case *object.String:
+					params[i] = raw.Value
+				case *object.Integer:
+					params[i] = raw.Value
+				case *object.Boolean:
+					params[i] = raw.Value
+				default:
+					params[i] = a.Inspect()
+				}
 			}
 			n, err := fmt.Fprintln(fp.out, params...)
 			if err != nil {
