@@ -40,19 +40,7 @@ func (fp *fmtPkg) Member(member string) func(object.Object, ...object.Object) ob
 	switch member {
 	case "println":
 		return func(receiver object.Object, args ...object.Object) object.Object {
-			params := make([]any, len(args))
-			for i, a := range args {
-				switch raw := a.(type) {
-				case *object.String:
-					params[i] = raw.Value
-				case *object.Integer:
-					params[i] = raw.Value
-				case *object.Boolean:
-					params[i] = raw.Value
-				default:
-					params[i] = a.Inspect()
-				}
-			}
+			params := object2native(args)
 			n, err := fmt.Fprintln(fp.out, params...)
 			if err != nil {
 				return object.Errorf(err.Error())
@@ -65,19 +53,7 @@ func (fp *fmtPkg) Member(member string) func(object.Object, ...object.Object) ob
 				return object.Errorf("wrong number of arguments. got=%d, want >= 1", len(args))
 			}
 			format := args[0].Inspect()
-			params := make([]any, len(args)-1)
-			for i, a := range args[1:] {
-				switch raw := a.(type) {
-				case *object.String:
-					params[i] = raw.Value
-				case *object.Integer:
-					params[i] = raw.Value
-				case *object.Boolean:
-					params[i] = raw.Value
-				default:
-					params[i] = a.Inspect()
-				}
-			}
+			params := object2native(args[1:])
 			n, err := fmt.Fprintf(fp.out, format, params...)
 			if err != nil {
 				return object.Errorf(err.Error())
@@ -87,4 +63,23 @@ func (fp *fmtPkg) Member(member string) func(object.Object, ...object.Object) ob
 	default:
 		return nil
 	}
+}
+
+func object2native(args []object.Object) []any {
+	params := make([]any, len(args))
+	for i, a := range args {
+		switch raw := a.(type) {
+		case *object.String:
+			params[i] = raw.Value
+		case *object.Integer:
+			params[i] = raw.Value
+		case *object.Boolean:
+			params[i] = raw.Value
+		case *object.Float:
+			params[i] = raw.Value
+		default:
+			params[i] = a.Inspect()
+		}
+	}
+	return params
 }

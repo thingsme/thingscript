@@ -19,19 +19,16 @@ func TestFmt(t *testing.T) {
 		{
 			input: `
 				var out = import("fmt")
-				out.println(1, 2, "x")
+				out.println(1, 2, "x", true)
 			`,
-			expected: "1 2 x\n",
+			expected: "1 2 x true\n",
 		},
 		{
 			input: `
 				out := import("fmt")
-				tv := true
-				out.printf("%02d %02x %s", 1, 10, "y")
+				out.printf("%02d %02x %t %s %.3f", 1, 10, true, "y", 3.141592)
 			`,
-			expected: "01 0a y",
-			// TODO: losting tv (boolean) values
-			//out.printf("%02d %02x %t %s", 1, 10, tv, "y")
+			expected: "01 0a true y 3.142",
 		},
 	}
 	for _, tt := range tests {

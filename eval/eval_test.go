@@ -158,7 +158,13 @@ func TestEvalBooleanExpression(t *testing.T) {
 	}
 	for _, tt := range tests {
 		evaluated := testEval(tt.input)
-		testBooleanObject(t, evaluated, tt.expected)
+		result, ok := evaluated.(*object.Boolean)
+		if !ok {
+			t.Errorf("object is not Boolean, got=%T (%+v)", evaluated, evaluated)
+		}
+		if result.Value != tt.expected {
+			t.Errorf("object has wrong value. got=%t, want=%t <- %s", result.Value, tt.expected, tt.input)
+		}
 	}
 }
 
@@ -168,7 +174,7 @@ func testBooleanObject(t *testing.T, obj object.Object, expected bool) bool {
 		t.Errorf("object is not Boolean, got=%T (%+v)", obj, obj)
 	}
 	if result.Value != expected {
-		t.Errorf("object has wrong value. got=%t, want=%t", result.Value, expected)
+		t.Errorf("object has wrong value. got=%t, want=%t <- ", result.Value, expected)
 		return false
 	}
 	return true
@@ -195,6 +201,27 @@ func TestStringConcatenation(t *testing.T) {
 	}
 	if str.Value != "Hello World" {
 		t.Errorf("String has wrong value. got=%q", str.Value)
+	}
+}
+
+func TestBooleanLiterals(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{`var x = true; x`, true},
+		{`var x = false; x`, false},
+		{`true`, true},
+		{`false`, false},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		if obj, ok := evaluated.(*object.Boolean); !ok {
+			t.Errorf("expect %t, got=%T(%v)", tt.expected, obj, obj)
+		} else if obj.Value != tt.expected {
+			t.Errorf("expect %t, got=%T(%v)", tt.expected, obj, obj)
+		}
 	}
 }
 
@@ -328,8 +355,8 @@ func TestHashLiterals(t *testing.T) {
 		(&object.String{Value: "two"}).HashKey():   2,
 		(&object.String{Value: "three"}).HashKey(): 3,
 		(&object.Integer{Value: 4}).HashKey():      4,
-		eval.TRUE.HashKey():                        5,
-		eval.FALSE.HashKey():                       6,
+		(&object.Boolean{Value: true}).HashKey():   5,
+		(&object.Boolean{Value: false}).HashKey():  6,
 	}
 	if len(result.Pairs) != len(expected) {
 		t.Fatalf("Hash has wrong num of pairs. got=%d", len(result.Pairs))
