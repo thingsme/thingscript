@@ -1,7 +1,7 @@
 [![codecov](https://codecov.io/gh/thingsme/thingscript/graph/badge.svg?token=9SCBJ4SXOF)](https://codecov.io/gh/thingsme/thingscript)
 
-ThingScript is a script interpreter that implemented in Go without zero dependency.
-It can be embedded in your Go application as a library.
+ThingScript is a script interpreter that implemented in Go with zero dependency.
+It can be embedded in your Go application as a library, and install as an executable binary.
 
 ## Hello World
 
