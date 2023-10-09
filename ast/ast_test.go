@@ -44,7 +44,7 @@ func TestAst(t *testing.T) {
 			t.Error("Parse Error:", err)
 		}
 		if ret.String() != tt.expected {
-			t.Errorf("AST wrong. got=%q", ret.String())
+			t.Errorf("AST wrong expect=%q. got=%q", tt.expected, ret.String())
 		}
 	}
 }
