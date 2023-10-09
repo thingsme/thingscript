@@ -1,6 +1,7 @@
 package stdlib
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/thingsme/thingscript/eval"
@@ -13,6 +14,9 @@ func testEval(input string) object.Object {
 	l := lexer.New(input)
 	p := parser.New(l)
 	program := p.ParseProgram()
+	for _, err := range p.Errors() {
+		fmt.Println("Parse Error:", err)
+	}
 	env := object.NewEnvironment()
 	env.RegisterPackages(Packages()...)
 	return eval.Eval(program, env)
@@ -26,6 +30,17 @@ func checkInteger(t *testing.T, obj object.Object, expect int64) {
 	}
 	if intObj.Value != expect {
 		t.Errorf("integer different, expect %d, got=%d", expect, intObj.Value)
+	}
+}
+
+func checkBoolean(t *testing.T, obj object.Object, expect bool) {
+	t.Helper()
+	boolObj, ok := obj.(*object.Boolean)
+	if !ok {
+		t.Errorf("obj is not an integer object, got=%T", obj)
+	}
+	if boolObj.Value != expect {
+		t.Errorf("boolean different, expect %t, got=%t", expect, boolObj.Value)
 	}
 }
 
@@ -182,6 +197,7 @@ func TestFunctions(t *testing.T) {
 		{`[1,2,3].init[1]`, 2},
 		{`sum := 0; [1,2,3].foreach(func(idx,elm){ sum += elm}); sum`, 6},
 		{`sum := ""; ["1","2","3"].foreach(func(idx,elm){ sum += elm}); sum`, "123"},
+		{`ret := true; [true, true, false].foreach(func(idx,elm){ ret = elm }); ret`, false},
 		{`func arr(){return [1,2,3]}; arr().head()`, 1},
 		{`func arr(){return [1,2,3]}; arr().head`, 1},
 		{`func arr(){return [1,2,3]}; arr().last()`, 3},
@@ -193,6 +209,8 @@ func TestFunctions(t *testing.T) {
 		switch expected := tt.expected.(type) {
 		case int:
 			checkInteger(t, evaluated, int64(expected))
+		case bool:
+			checkBoolean(t, evaluated, expected)
 		case string:
 			switch obj := evaluated.(type) {
 			case *object.String:
