@@ -292,7 +292,7 @@ func TestParsingHashLiteral(t *testing.T) {
 	checkParseErrors(t, p)
 
 	stmt := program.Statements[0].(*ast.ExpressionStatement)
-	hash, ok := stmt.Expression.(*ast.HashLiteral)
+	hash, ok := stmt.Expression.(*ast.HashMapLiteral)
 	if !ok {
 		t.Fatalf("exp is not ast.HashLiteral. got=%T", stmt.Expression)
 	}
@@ -322,7 +322,7 @@ func TestParsingEmptyHashLiteral(t *testing.T) {
 	checkParseErrors(t, p)
 
 	stmt := program.Statements[0].(*ast.ExpressionStatement)
-	hash, ok := stmt.Expression.(*ast.HashLiteral)
+	hash, ok := stmt.Expression.(*ast.HashMapLiteral)
 	if !ok {
 		t.Fatalf("exp is not ast.HashLiteral. got=%T", stmt.Expression)
 	}

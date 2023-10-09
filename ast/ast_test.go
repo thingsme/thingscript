@@ -25,7 +25,7 @@ func TestAst(t *testing.T) {
 		{`while(true) { a += 1}`, "while ( true ) { a += 1; }"},
 		{`do{ a += 1 } while(true)`, "do { a += 1; } while (true);"},
 		{`a = [1, 2, 3]`, "a = [1, 2, 3];"},
-		{`h = {a: "alpha", b: "beta"}`, "h = {a:alpha, b:beta};"},
+		{`h = {a: "alpha", b: "beta"}`, "h = { a:alpha, b:beta };"},
 		{`call(ab, cd)`, "call(ab, cd)"},
 		{`arr[12]`, "(arr[12])"},
 		{`"hello-world".length`, "((hello-world).(length))"},
