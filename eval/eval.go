@@ -1,8 +1,6 @@
 package eval
 
 import (
-	"fmt"
-
 	"github.com/thingsme/thingscript/ast"
 	"github.com/thingsme/thingscript/object"
 )
@@ -26,10 +24,6 @@ func nativeBoolToBooleanObject(input bool) *object.Boolean {
 		return TRUE
 	}
 	return FALSE
-}
-
-func newError(format string, args ...any) *object.Error {
-	return &object.Error{Message: fmt.Sprintf(format, args...)}
 }
 
 func isError(obj object.Object) bool {
@@ -84,7 +78,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.AssignStatement:
 		val, ok := env.Get(node.Name.Value)
 		if !ok {
-			return newError("identifier not found: %s", node.Name.Value)
+			return object.Errorf("identifier not found: %s", node.Name.Value)
 		}
 		evaluated := Eval(node.Value, env)
 		if isError(evaluated) {
@@ -94,7 +88,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.OperAssignStatement:
 		left, ok := env.Get(node.Name.Value)
 		if !ok {
-			return newError("identifier not found: %s", node.Name.Value)
+			return object.Errorf("identifier not found: %s", node.Name.Value)
 		}
 		right := Eval(node.Value, env)
 		if isError(right) {
@@ -278,7 +272,7 @@ func applyFunction(fn object.Object, args []object.Object) object.Object {
 		}
 		return NULL
 	default:
-		return newError("not a function: %s", fn.Type())
+		return object.Errorf("not a function: %s", fn.Type())
 	}
 }
 
@@ -293,31 +287,31 @@ func evalAccessExpression(exp *ast.AccessExpression, env *object.Environment) ob
 		pkg, _ = env.Import(pkgname)
 	}
 	if pkg == nil {
-		return newError("package not found for %T (%+v)", left, left)
+		return object.Errorf("package not found for %T (%+v)", left, left)
 	}
 
 	switch r := exp.Right.(type) {
 	case *ast.Identifier:
 		fn := pkg.Member(r.Value)
 		if fn == nil {
-			return newError("function %q not found in %q", r.Value, pkg.Name())
+			return object.Errorf("function %q not found in %q", r.Value, pkg.Name())
 		}
 		ret := fn(left)
 		return ret
 	case *ast.CallExpression:
 		fnIdent, ok := r.Function.(*ast.Identifier)
 		if !ok {
-			return newError("undefined %q in %q", r.Function.String(), pkg.Name())
+			return object.Errorf("undefined %q in %q", r.Function.String(), pkg.Name())
 		}
 		fn := pkg.Member(fnIdent.Value)
 		if fn == nil {
-			return newError("function %q not found in %q", fnIdent.Value, pkg.Name())
+			return object.Errorf("function %q not found in %q", fnIdent.Value, pkg.Name())
 		}
 		args := evalExpressions(r.Arguments, env)
 		ret := fn(left, args...)
 		return ret
 	default:
-		return newError("invalid access operator %q.(%T)", pkg.Name(), r)
+		return object.Errorf("invalid access operator %q.(%T)", pkg.Name(), r)
 	}
 }
 
@@ -408,7 +402,7 @@ func evalIndexExpression(left object.Object, index object.Object) object.Object 
 	case left.Type() == object.HASHMAP_OBJ:
 		return evalHashIndexExpression(left, index)
 	default:
-		return newError("index operation not supported: %s", left.Type())
+		return object.Errorf("index operation not supported: %s", left.Type())
 	}
 }
 
@@ -426,7 +420,7 @@ func evalHashIndexExpression(hash object.Object, index object.Object) object.Obj
 	hashObject := hash.(*object.HashMap)
 	key, ok := index.(object.Hashable)
 	if !ok {
-		return newError("unusable as hash key: %s", index.Type())
+		return object.Errorf("unusable as hash key: %s", index.Type())
 	}
 	pair, ok := hashObject.Pairs[key.HashKey()]
 	if !ok {
@@ -444,7 +438,7 @@ func evalHashLiteral(node *ast.HashLiteral, env *object.Environment) object.Obje
 		}
 		hashKey, ok := key.(object.Hashable)
 		if !ok {
-			return newError("unusable as hash key: %s", key.Type())
+			return object.Errorf("unusable as hash key: %s", key.Type())
 		}
 		value := Eval(valueNode, env)
 		if isError(value) {
@@ -482,7 +476,7 @@ func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object
 		return builtin
 	}
 
-	return newError("identifier not found: " + node.Value)
+	return object.Errorf("identifier not found: " + node.Value)
 }
 
 func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
@@ -494,7 +488,7 @@ func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
 		value := right.(*object.Float).Value
 		return &object.Float{Value: value * -1}
 	default:
-		return newError("unknown operator: -%s", right.Type())
+		return object.Errorf("unknown operator: -%s", right.Type())
 	}
 }
 
@@ -505,7 +499,7 @@ func evalPrefixExpression(operator string, right object.Object) object.Object {
 	case "-":
 		return evalMinusPrefixOperatorExpression(right)
 	default:
-		return newError("unknown operator: %s%s", operator, right.Type())
+		return object.Errorf("unknown operator: %s%s", operator, right.Type())
 	}
 }
 
@@ -522,9 +516,9 @@ func evalInfixExpression(operator string, left object.Object, right object.Objec
 	case operator == "!=":
 		return nativeBoolToBooleanObject(left != right)
 	case left.Type() != right.Type():
-		return newError("type mismatch: %s %s %s", left.Type(), operator, right.Type())
+		return object.Errorf("type mismatch: %s %s %s", left.Type(), operator, right.Type())
 	default:
-		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return object.Errorf("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 
@@ -551,7 +545,7 @@ func evalIntegerInfixExpression(operator string, left object.Object, right objec
 	case "!=":
 		return nativeBoolToBooleanObject(leftVal != rightVal)
 	default:
-		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return object.Errorf("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 
@@ -576,13 +570,13 @@ func evalFloatInfixExpression(operator string, left object.Object, right object.
 	case "!=":
 		return nativeBoolToBooleanObject(leftVal != rightVal)
 	default:
-		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return object.Errorf("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 
 func evalStringInfixExpression(operator string, left object.Object, right object.Object) object.Object {
 	if operator != "+" {
-		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return object.Errorf("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 	leftVal := left.(*object.String).Value
 	rightVal := right.(*object.String).Value
