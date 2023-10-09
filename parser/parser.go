@@ -186,7 +186,7 @@ func (p *Parser) parseStatement() ast.Statement {
 	case p.curToken.Type == token.IDENT && p.peekTokenIs(token.VARASSIGN):
 		return p.parseVarAssignStatement()
 	case p.curToken.Type == token.IDENT && p.peekTokenIs(token.ASSIGN):
-		return p.paseAssignStatement()
+		return p.parseAssignStatement()
 	case p.curToken.Type == token.IDENT && p.peekTokenIs(token.ADDASSIGN):
 		return p.parseOperAssignStatement("+")
 	case p.curToken.Type == token.IDENT && p.peekTokenIs(token.SUBASSIGN):
@@ -259,7 +259,7 @@ func (p *Parser) parseVarAssignStatement() *ast.VarStatement {
 	return stmt
 }
 
-func (p *Parser) paseAssignStatement() *ast.AssignStatement {
+func (p *Parser) parseAssignStatement() *ast.AssignStatement {
 	ident := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 	if !p.expectPeek(token.ASSIGN) {
 		return nil

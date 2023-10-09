@@ -150,6 +150,67 @@ func TestIdentifierExpression(t *testing.T) {
 	}
 }
 
+func TestAssignStatement(t *testing.T) {
+	input := `foo = "bar"`
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParseErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program has not enough statements, got=%d",
+			len(program.Statements))
+	}
+	stmt, ok := program.Statements[0].(*ast.AssignStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.AssignStatement, got=%T",
+			program.Statements[0])
+	}
+	ident := stmt.Name
+	if ident.Value != "foo" {
+		t.Errorf("ident.Value not %s, got=%T", "foobar", ident.Value)
+	}
+	value, ok := stmt.Value.(*ast.StringLiteral)
+	if !ok {
+		t.Errorf("right value not ast.StringLiteral, got=%T", value)
+	}
+	if value.TokenLiteral() != "bar" {
+		t.Errorf("right value not %s, got=%s", "bar", value.TokenLiteral())
+	}
+}
+
+func TestOperAssignStatement(t *testing.T) {
+	input := `foo += 123`
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParseErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program has not enough statements, got=%d",
+			len(program.Statements))
+	}
+	stmt, ok := program.Statements[0].(*ast.OperAssignStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.OperAssignStatement, got=%T",
+			program.Statements[0])
+	}
+	if stmt.Operator != "+" {
+		t.Errorf("operator not %q, got=%q", "+", stmt.Operator)
+	}
+	ident := stmt.Name
+	if ident.Value != "foo" {
+		t.Errorf("ident.Value not %s, got=%T", "foobar", ident.Value)
+	}
+	value, ok := stmt.Value.(*ast.IntegerLiteral)
+	if !ok {
+		t.Errorf("right value not ast.IntegerLiteral, got=%T", value)
+	}
+	if value.TokenLiteral() != "123" {
+		t.Errorf("right value not %s, got=%s", "123", value.TokenLiteral())
+	}
+}
+
 func TestImmediateIfExpression(t *testing.T) {
 	input := "foo ?? bar"
 	l := lexer.New(input)
@@ -713,6 +774,43 @@ func TestWhileExpression(t *testing.T) {
 	exp, ok := stmt.Expression.(*ast.WhileExpression)
 	if !ok {
 		t.Fatalf("stmt.Expression is not ast.WhileStatement, got=%T", stmt.Expression)
+	}
+	if exp.Condition.String() != "(x < 5)" {
+		t.Errorf("condition is not %s. got=%s", "x < 5", exp.Condition.String())
+		return
+	}
+	if len(exp.Block.Statements) != 1 {
+		t.Errorf("block is not 1 statements. got=%d", len(exp.Block.Statements))
+	}
+	breakStatement, ok := exp.Block.Statements[0].(*ast.BreakStatement)
+	if !ok {
+		t.Fatalf("Statements[0] is not ast.BreakStatement, got=%T",
+			exp.Block.Statements[0])
+	}
+	if breakStatement.TokenLiteral() != "break" {
+		t.Errorf("block is not break statement. got=%s", breakStatement.String())
+	}
+}
+
+func TestDoWhileExpression(t *testing.T) {
+	input := `do { break } while (x < 5)`
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParseErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d",
+			1, len(program.Statements))
+	}
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement, got=%T",
+			program.Statements[0])
+	}
+	exp, ok := stmt.Expression.(*ast.DoWhileExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.DoWhileStatement, got=%T", stmt.Expression)
 	}
 	if exp.Condition.String() != "(x < 5)" {
 		t.Errorf("condition is not %s. got=%s", "x < 5", exp.Condition.String())
