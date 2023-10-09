@@ -1,4 +1,3 @@
 ignore:
   - token
-  - ast
   - repl
