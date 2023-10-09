@@ -298,7 +298,7 @@ func TestHashLiterals(t *testing.T) {
 	}
 	`
 	evaluated := testEval(input)
-	result, ok := evaluated.(*object.Hash)
+	result, ok := evaluated.(*object.HashMap)
 	if !ok {
 		t.Fatalf("Eval didn't return Hash. got=%T (%+v)", evaluated, evaluated)
 	}

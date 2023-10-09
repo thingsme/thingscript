@@ -19,7 +19,7 @@ const (
 	BOOLEAN_OBJ      = "BOOLEAN"
 	STRING_OBJ       = "STRING"
 	ARRAY_OBJ        = "ARRAY"
-	HASH_OBJ         = "HASH"
+	HASHMAP_OBJ      = "HASHMAP"
 	FUNCTION_OBJ     = "FUNCTION"
 	BUILTIN_OBJ      = "BUILTIN"
 	IMPORT_OBJ       = "IMPORT"
@@ -186,12 +186,12 @@ type HashPair struct {
 	Value Object
 }
 
-type Hash struct {
+type HashMap struct {
 	Pairs map[HashKey]HashPair
 }
 
-func (h *Hash) Type() ObjectType { return HASH_OBJ }
-func (h *Hash) Inspect() string {
+func (h *HashMap) Type() ObjectType { return HASHMAP_OBJ }
+func (h *HashMap) Inspect() string {
 	var out bytes.Buffer
 	pairs := []string{}
 	for _, pair := range h.Pairs {

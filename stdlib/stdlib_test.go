@@ -1,4 +1,4 @@
-package arrays
+package stdlib
 
 import (
 	"testing"
@@ -14,7 +14,7 @@ func testEval(input string) object.Object {
 	p := parser.New(l)
 	program := p.ParseProgram()
 	env := object.NewEnvironment()
-	env.RegisterPackages(New())
+	env.RegisterPackages(Packages()...)
 	return eval.Eval(program, env)
 }
 
@@ -26,6 +26,17 @@ func checkInteger(t *testing.T, obj object.Object, expect int64) {
 	}
 	if intObj.Value != expect {
 		t.Errorf("integer different, expect %d, got=%d", expect, intObj.Value)
+	}
+}
+
+func checkString(t *testing.T, obj object.Object, expect string) {
+	t.Helper()
+	strObj, ok := obj.(*object.String)
+	if !ok {
+		t.Errorf("obj is not an integer object, got=%T", obj)
+	}
+	if strObj.Value != expect {
+		t.Errorf("integer different, expect %s, got=%s", expect, strObj.Value)
 	}
 }
 
@@ -51,15 +62,58 @@ func checkIntegerArray(t *testing.T, obj object.Object, expectArr []int64) {
 	}
 }
 
-func TestLen(t *testing.T) {
+func TestType(t *testing.T) {
+	// string
+	str := &object.String{Value: "1234"}
+	sp := &strings{}
+	strType := sp.Member("type")(str)
+	checkString(t, strType, "string")
+
+	// array
 	arr := &object.Array{Elements: []object.Object{
 		&object.Integer{Value: 1},
 		&object.Integer{Value: 2},
 		&object.Integer{Value: 3},
 	}}
-	ap := New()
+	ap := &arrays{}
+	arrType := ap.Member("type")(arr)
+	checkString(t, arrType, "array")
+
+	// hashmap
+	hash := &object.HashMap{
+		Pairs: map[object.HashKey]object.HashPair{
+			(&object.Integer{Value: 1}).HashKey(): {Key: &object.Integer{Value: 1}, Value: &object.Integer{Value: 2}},
+		}}
+	hp := &hashmap{}
+	hashType := hp.Member("type")(hash)
+	checkString(t, hashType, "hashmap")
+}
+
+func TestLength(t *testing.T) {
+	// string
+	str := &object.String{Value: "1234"}
+	sp := &strings{}
+	strLen := sp.Member("length")(str)
+	checkInteger(t, strLen, 4)
+
+	// array
+	arr := &object.Array{Elements: []object.Object{
+		&object.Integer{Value: 1},
+		&object.Integer{Value: 2},
+		&object.Integer{Value: 3},
+	}}
+	ap := &arrays{}
 	arrLen := ap.Member("length")(arr)
 	checkInteger(t, arrLen, 3)
+
+	// hashmap
+	hash := &object.HashMap{
+		Pairs: map[object.HashKey]object.HashPair{
+			(&object.Integer{Value: 1}).HashKey(): {Key: &object.Integer{Value: 1}, Value: &object.Integer{Value: 2}},
+		}}
+	hp := &hashmap{}
+	mapLen := hp.Member("length")(hash)
+	checkInteger(t, mapLen, 1)
 }
 
 func TestPush(t *testing.T) {
@@ -69,7 +123,7 @@ func TestPush(t *testing.T) {
 		&object.Integer{Value: 3},
 	}}
 
-	p := New()
+	p := &arrays{}
 	ret := p.Member("push")(arr, &object.Integer{Value: 4})
 	checkIntegerArray(t, ret, []int64{1, 2, 3, 4})
 }
@@ -80,7 +134,7 @@ func TestInitLast(t *testing.T) {
 		&object.Integer{Value: 2},
 		&object.Integer{Value: 3},
 	}}
-	p := New()
+	p := &arrays{}
 	initRet := p.Member("init")(arr)
 	lastRet := p.Member("last")(arr)
 
@@ -94,7 +148,7 @@ func TestHeadTail(t *testing.T) {
 		&object.Integer{Value: 2},
 		&object.Integer{Value: 3},
 	}}
-	p := New()
+	p := &arrays{}
 	headRet := p.Member("head")(arr)
 	tailRet := p.Member("tail")(arr)
 
