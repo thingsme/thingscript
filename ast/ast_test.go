@@ -20,6 +20,7 @@ func TestAst(t *testing.T) {
 		{`func myFn(a, b){ return a + b}`, "func <myFn>(a, b) {return (a + b);}"},
 		{`var myFn = func(){return true}`, "var myFn = func<myFn>() { return true; };"},
 		{`if a < b { break }`, "if (a < b) { break; }"},
+		{`if a == b { true } else { false }`, "if (a == b) { true} else { false }"},
 		{`a = b ?? 10`, "a = (b ?? 10);"},
 		{`while(true) { a += 1}`, "while ( true ) { a += 1; }"},
 		{`do{ a += 1 } while(true)`, "do { a += 1; } while (true);"},
@@ -28,9 +29,11 @@ func TestAst(t *testing.T) {
 		{`call(ab, cd)`, "call(ab, cd)"},
 		{`arr[12]`, "(arr[12])"},
 		{`"hello-world".length`, "((hello-world).(length))"},
+		{`"hello-world".length()`, "((hello-world).(length()))"},
 		{`[1, 2, 3].field`, `(([1, 2, 3]).(field))`},
 		{`[1, 2, 3].call()`, `(([1, 2, 3]).(call()))`},
 		{`[1, 2, 3].call(true)`, `(([1, 2, 3]).(call(true)))`},
+		{`if ("v".type() == "integer"){ true }`, "if (((v).(type())) == integer) { true }"},
 	}
 
 	for _, tt := range tests {

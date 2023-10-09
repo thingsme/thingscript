@@ -78,6 +78,26 @@ func checkIntegerArray(t *testing.T, obj object.Object, expectArr []int64) {
 }
 
 func TestType(t *testing.T) {
+	tests := []string{
+		`v := 10; v.type == "integer"`,
+		`v := 12.3; v.type == "float"`,
+		`v := true; v.type == "boolean"`,
+		`v := [1,2]; v.type == "array"`,
+		`v := {"a":1,"b":2.3}; v.type == "hashmap"`,
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt)
+		p := parser.New(l)
+		program := p.ParseProgram()
+		env := object.NewEnvironment()
+		env.RegisterPackages(Packages()...)
+		ret := eval.Eval(program, env)
+		if b, ok := ret.(*object.Boolean); !ok {
+			t.Errorf("Result not boolean, got=%T (%+v)", ret, ret)
+		} else if !b.Value {
+			t.Error("Result fail <= ", tt)
+		}
+	}
 	// string
 	str := &object.String{Value: "1234"}
 	sp := &strings{}

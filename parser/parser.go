@@ -137,8 +137,8 @@ func (p *Parser) Errors() []string {
 }
 
 func (p *Parser) peekError(t token.TokenType) {
-	msg := fmt.Sprintf("expected next token to be %s, got %s instead",
-		t, p.peekToken.Type)
+	msg := fmt.Sprintf("expected next token to be %s, got %q %s instead",
+		t, p.peekToken.Literal, p.peekToken.Type)
 	p.errors = append(p.errors, msg)
 }
 
@@ -306,6 +306,9 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 		return nil
 	}
 	leftExp := prefix()
+	if leftExp == nil {
+		p.noPrefixParseError(p.peekToken.Type)
+	}
 	for !p.peekTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() {
 		infix := p.infixParseFns[p.peekToken.Type]
 		if infix == nil {

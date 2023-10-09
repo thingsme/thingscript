@@ -397,6 +397,10 @@ func TestIfElseExpression(t *testing.T) {
 		{"if (1 < 2){ 10 } else { 20 }", 10},
 		{"if 1 > 2 { 10 } else { 20 }", 20},
 		{"if 1 < 2 { 10 } else { 20 }", 10},
+		{`if "abc" < "bcd" { 10 } else {20}`, 10},
+		{`if "abc" > "bcd" { 10 } else {20}`, 20},
+		{`if "abc" != "bcd" { 10 } else {20}`, 10},
+		{`if "abc" == "bcd" { 10 } else {20}`, 20},
 		{"if nil { 10 } else { 20 }", 20},
 	}
 	for _, tt := range tests {

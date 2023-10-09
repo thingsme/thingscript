@@ -81,12 +81,14 @@ var keywords = map[string]TokenType{
 	"do":     DO,
 	"break":  BREAK,
 	// reserved
-	"const": ILLEGAL,
-	"def":   ILLEGAL,
-	"type":  ILLEGAL,
-	"let":   ILLEGAL,
-	"class": ILLEGAL,
-	"for":   ILLEGAL,
+	"const":   ILLEGAL,
+	"def":     ILLEGAL,
+	"let":     ILLEGAL,
+	"class":   ILLEGAL,
+	"public":  ILLEGAL,
+	"private": ILLEGAL,
+	"package": ILLEGAL,
+	"for":     ILLEGAL,
 }
 
 func LookupIdent(ident string) TokenType {
