@@ -1,3 +1,5 @@
 ignore:
   - token
   - repl
+  - "main.go"
+  - "**/*_test.go"

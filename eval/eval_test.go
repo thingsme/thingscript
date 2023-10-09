@@ -662,8 +662,7 @@ func TestBuiltinFunction(t *testing.T) {
 				t.Error("Eval Error: not string", evaluated, "<=", tt.input)
 			}
 			if obj.Value != expected {
-				t.Errorf("wrong string. expected=%q, got=%q",
-					expected, obj.Value)
+				t.Errorf("wrong string. expected=%q, got=%q", expected, obj.Value)
 			}
 		case float64:
 			testFloatObject(t, evaluated, expected)
