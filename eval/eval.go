@@ -40,6 +40,13 @@ func isBreak(obj object.Object) bool {
 	return false
 }
 
+func isReturn(obj object.Object) bool {
+	if obj != nil {
+		return obj.Type() == object.RETURN_VALUE_OBJ
+	}
+	return false
+}
+
 func isTruthy(obj object.Object) bool {
 	switch obj {
 	case NULL:
@@ -346,6 +353,9 @@ func evalWhileExpression(we *ast.WhileExpression, env *object.Environment) objec
 		if isBreak(ret) {
 			break
 		}
+		if isReturn(ret) {
+			return ret
+		}
 	}
 	return nil
 }
@@ -358,6 +368,9 @@ func evalDoWhileExpression(we *ast.DoWhileExpression, env *object.Environment) o
 		}
 		if isBreak(ret) {
 			break
+		}
+		if isReturn(ret) {
+			return ret
 		}
 		condition := Eval(we.Condition, env)
 		if isError(condition) {

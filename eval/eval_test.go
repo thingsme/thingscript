@@ -236,6 +236,9 @@ func TestWhileExpression(t *testing.T) {
 	}{
 		{`var sum = 0; var v = 0; while v < 10 { v += 1; sum += v; }; sum`, 55},
 		{`var sum = 0; var v = 0; while v < 20 { v += 1; sum += v; if (v == 10) { break } }; sum`, 55},
+		{`var sum = 0; func run(){ var v = 0; while v < 20 { v += 1; sum += v; if (v == 10) { return 10; } } };  run(); sum`, 55},
+		{`var sum = 0; func run(){ var v = 0; while v < 20 { v += 1; sum += v; if (v == 10) { return; } } };  run(); sum`, 55},
+		{`var sum = 0; func run(){ var v = 0; while v < 20 { v += 1; sum += v; if (v == 10) { return } } };  run(); sum`, 55},
 	}
 
 	for _, tt := range tests {
@@ -416,12 +419,8 @@ func TestReturnStatement(t *testing.T) {
 		{"return 10; 9;", 10},
 		{"return 2 * 5; 9;", 10},
 		{"9; return 2 * 5;", 10},
-		{`
-		if (10 > 1) {
-			return 10;
-		}
-		return 1;
-		`, 10},
+		{`if (10 > 1) { return 10; } return 1; `, 10},
+		{`func() { return ( if (10 > 1) { nil } else { 1 } ) }() ?? 10 `, 10},
 	}
 	for _, tt := range tests {
 		evalutated := testEval(tt.input)

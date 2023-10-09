@@ -52,9 +52,9 @@ func (rs *ReturnStatement) statementNode()       {}
 func (rs *ReturnStatement) TokenLiteral() string { return rs.Token.Literal }
 func (rs *ReturnStatement) String() string {
 	var out bytes.Buffer
-	out.WriteString(rs.TokenLiteral() + " ")
+	out.WriteString(rs.TokenLiteral())
 	if rs.ReturnValue != nil {
-		out.WriteString(rs.ReturnValue.String())
+		out.WriteString(" " + rs.ReturnValue.String())
 	}
 	out.WriteString(";")
 	return out.String()
@@ -67,7 +67,7 @@ type BreakStatement struct {
 func (bs *BreakStatement) statementNode()       {}
 func (bs *BreakStatement) TokenLiteral() string { return bs.Token.Literal }
 func (bs *BreakStatement) String() string {
-	return "break"
+	return "break;"
 }
 
 type VarStatement struct {
@@ -103,6 +103,7 @@ func (as *AssignStatement) String() string {
 	out.WriteString(as.Name.String())
 	out.WriteString(" = ")
 	out.WriteString(as.Value.String())
+	out.WriteString(";")
 	return out.String()
 }
 
@@ -120,6 +121,7 @@ func (oa *OperAssignStatement) String() string {
 	out.WriteString(oa.Name.String())
 	out.WriteString(" " + oa.Operator + "= ")
 	out.WriteString(oa.Value.String())
+	out.WriteString(";")
 	return out.String()
 }
 
@@ -139,7 +141,7 @@ func (fs *FunctionStatement) String() string {
 		params = append(params, p.String())
 	}
 	out.WriteString(fs.TokenLiteral() + " ")
-	out.WriteString(fs.Name.String())
+	out.WriteString("<" + fs.Name.String() + ">")
 	out.WriteString("(")
 	out.WriteString(strings.Join(params, ", "))
 	out.WriteString(") {")
@@ -227,12 +229,13 @@ func (ie *IfExpression) String() string {
 	out.WriteString("if")
 	out.WriteString(" ")
 	out.WriteString(ie.Condition.String())
-	out.WriteString(" ")
+	out.WriteString(" { ")
 	out.WriteString(ie.Consequence.String())
 	if ie.Alternative != nil {
-		out.WriteString("else ")
+		out.WriteString("} else { ")
 		out.WriteString(ie.Alternative.String())
 	}
+	out.WriteString(" }")
 	return out.String()
 }
 
@@ -265,10 +268,12 @@ func (we *WhileExpression) TokenLiteral() string { return we.Token.Literal }
 func (we *WhileExpression) String() string {
 	var out bytes.Buffer
 	out.WriteString(we.Token.Literal)
-	out.WriteString(" { ")
+	out.WriteString(" ( ")
 	out.WriteString(we.Condition.String())
-	out.WriteString(" } ")
+	out.WriteString(" ) ")
+	out.WriteString("{ ")
 	out.WriteString(we.Block.String())
+	out.WriteString(" }")
 	return out.String()
 }
 
@@ -287,7 +292,7 @@ func (we *DoWhileExpression) String() string {
 	out.WriteString(we.Block.String())
 	out.WriteString(" } while (")
 	out.WriteString(we.Condition.String())
-	out.WriteString(")")
+	out.WriteString(");")
 	return out.String()
 }
 
@@ -357,8 +362,9 @@ func (fl *FunctionLiteral) String() string {
 	}
 	out.WriteString("(")
 	out.WriteString(strings.Join(params, ", "))
-	out.WriteString(") ")
+	out.WriteString(") { ")
 	out.WriteString(fl.Body.String())
+	out.WriteString(" }")
 	return out.String()
 }
 
