@@ -35,8 +35,10 @@ const (
 	DIVASSIGN   TokenType = "/="
 	MODASSIGN   TokenType = "%="
 
-	LT TokenType = "<"
-	GT TokenType = ">"
+	LT  TokenType = "<"
+	LTE TokenType = "<="
+	GT  TokenType = ">"
+	GTE TokenType = ">="
 
 	EQ     TokenType = "=="
 	NOT_EQ TokenType = "!="

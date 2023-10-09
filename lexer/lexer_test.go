@@ -17,7 +17,9 @@ func TestNextToken(t *testing.T) {
 	var result = add(five, ten);
 	!-/5*;
 	5 < 10 > 5;
+	5 <= 10 >= 5;
 	3.14 > 3
+	3.14 >= 3
 	0xAF < 0xff
 	0b10 < 0x1f
 	0o7 < 010
@@ -101,9 +103,20 @@ func TestNextToken(t *testing.T) {
 		{token.GT, ">"},
 		{token.INT, "5"},
 		{token.SEMICOLON, ";"},
+		// 5 <= 10 >= 5;
+		{token.INT, "5"},
+		{token.LTE, "<="},
+		{token.INT, "10"},
+		{token.GTE, ">="},
+		{token.INT, "5"},
+		{token.SEMICOLON, ";"},
 		// 3.14 > 3
 		{token.FLOAT, "3.14"},
 		{token.GT, ">"},
+		{token.INT, "3"},
+		// 	3.14 >= 3
+		{token.FLOAT, "3.14"},
+		{token.GTE, ">="},
 		{token.INT, "3"},
 		// 0xAF < 0xff
 		{token.INT, "0xAF"},

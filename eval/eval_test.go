@@ -97,6 +97,8 @@ func TestEvalFloatExpression(t *testing.T) {
 		{"3.0 * 3.0 * 3.0 + 10.0", 37},
 		{"3.0 * (3.0 * 3.0) + 10.0", 37},
 		{"(5.0 + 10.0 * 2.0 + 15.0 / 3.0) * 2.0 +-10.0", 50},
+		{"1 + 2.3", 3.3},
+		{"1.2 + 3", 4.2},
 	}
 	for _, tt := range tests {
 		evaluated := testEval(tt.input)
@@ -132,7 +134,13 @@ func TestEvalBooleanExpression(t *testing.T) {
 		{"true", true},
 		{"false", false},
 		{"1 < 2", true},
+		{"1.0 < 2", true},
+		{"1 <= 2", true},
+		{"2 <= 2", true},
 		{"1 > 2", false},
+		{"1 >= 2", false},
+		{"2 >= 2", true},
+		{"2 >= 2.0", true},
 		{"1 < 1", false},
 		{"1 > 1", false},
 		{"1 == 1", true},

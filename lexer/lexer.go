@@ -94,16 +94,26 @@ func (l *Lexer) NextToken() token.Token {
 			tok = newToken(token.SLASH, l.ch)
 		}
 	case '%':
-		if l.peekChar() == '=' { // '%=
+		if l.peekChar() == '=' { // '%='
 			l.readChar()
 			tok = token.Token{Type: token.MODASSIGN, Literal: "%="}
 		} else {
 			tok = newToken(token.PERCENT, l.ch)
 		}
 	case '<':
-		tok = newToken(token.LT, l.ch)
+		if l.peekChar() == '=' { //  '<='
+			l.readChar()
+			tok = token.Token{Type: token.LTE, Literal: "<="}
+		} else {
+			tok = newToken(token.LT, l.ch)
+		}
 	case '>':
-		tok = newToken(token.GT, l.ch)
+		if l.peekChar() == '=' { //  '>='
+			l.readChar()
+			tok = token.Token{Type: token.GTE, Literal: ">="}
+		} else {
+			tok = newToken(token.GT, l.ch)
+		}
 	case '(':
 		tok = newToken(token.LPAREN, l.ch)
 	case ')':
