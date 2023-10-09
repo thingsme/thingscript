@@ -537,9 +537,6 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
 		return nil
 	}
 	lit.Body = p.parseBlockStatement()
-	for p.peekTokenIs(token.SEMICOLON) {
-		p.nextToken()
-	}
 	return lit
 }
 

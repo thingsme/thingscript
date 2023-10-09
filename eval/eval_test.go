@@ -582,6 +582,28 @@ func TestClosure(t *testing.T) {
 	}
 }
 
+func TestBuiltinFunctionError(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{`1.length()`, "identifier not found: length"},
+		{`1.length`, "identifier not found: length"},
+		{`"one".length("two")`, "wrong number of arguments. got=1, want=0"},
+	}
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		obj, ok := evaluated.(*object.Error)
+		if !ok {
+			t.Errorf("Eval Error, it should be error, got=%T", evaluated)
+		}
+		if obj.Message != tt.expected {
+			t.Errorf("wrong error message. expected=%q, got=%q",
+				tt.expected, obj.Message)
+		}
+	}
+}
+
 func TestBuiltinFunction(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -593,9 +615,6 @@ func TestBuiltinFunction(t *testing.T) {
 		{`"four".length`, 4},
 		{`"hello world".length()`, 11},
 		{`("hello" + " " + "world").length`, 11},
-		{`1.length()`, "identifier not found: length"},
-		{`1.length`, "identifier not found: length"},
-		{`"one".length("two")`, "wrong number of arguments. got=1, want=0"},
 		{`[1, 2, 3].length()`, 3},
 		{`[1, 2, 3].length`, 3},
 		{`[1, 2, 3].head()`, 1},
@@ -608,8 +627,16 @@ func TestBuiltinFunction(t *testing.T) {
 		{`[1,2,3].init()[0]`, 1},
 		{`[1,2,3].init()[1]`, 2},
 		{`sum := 0; [1,2,3].foreach(func(idx,elm){ sum += elm}); sum`, 6},
+		{`sum := 0; func iter(idx, elm){ sum += elm}; [1,2,3].foreach(iter); sum`, 6},
+		{`sum := 0; iter := func(idx, elm){ sum += elm}; [1,2,3].foreach(iter); sum`, 6},
+		{`sum := 0.0; [1.1,2.2,3.3].foreach(func(idx,elm){ sum += elm}); sum`, 6.6},
 		{`sum := ""; ["1","2","3"].foreach(func(idx,elm){ sum += elm}); sum`, "123"},
+		{`sum := ""; func cat(idx, elm){ sum+=elm}; ["1","2","3"].foreach(cat); sum`, "123"},
+		{`sum := ""; cat := func(idx, elm){ sum+=elm}; ["1","2","3"].foreach(cat); sum`, "123"},
 		{`ret := true; [true, true, false].foreach(func(idx,elm){ ret = elm }); ret`, false},
+		{`ret := true; func iter(idx,elm){ ret = elm }; [true, true, false].foreach(iter); ret`, false},
+		{`ret := true; var iter = func(idx,elm){ ret = elm }; [true, true, false].foreach(iter); ret`, false},
+		{`ret := true; iter := func(idx,elm){ ret = elm }; [true, true, false].foreach(iter); ret`, false},
 		{`func arr(){return [1,2,3]}; arr().head()`, 1},
 		{`func arr(){return [1,2,3]}; arr().last()`, 3},
 		{`var b = [1,2,3].push(4); b[3]`, 4},
@@ -618,26 +645,27 @@ func TestBuiltinFunction(t *testing.T) {
 
 	for _, tt := range tests {
 		evaluated := testEval(tt.input)
+		if evaluated != nil && evaluated.Type() == object.ERROR_OBJ {
+			t.Error("Eval Error:", evaluated, "<=", tt.input)
+		}
 		switch expected := tt.expected.(type) {
 		case int:
 			testIntegerObject(t, evaluated, int64(expected))
 		case bool:
 			checkBoolean(t, evaluated, expected)
 		case string:
-			switch obj := evaluated.(type) {
-			case *object.String:
-				if obj.Value != expected {
-					t.Errorf("wrong string. expected=%q, got=%q",
-						expected, obj.Value)
-				}
-			case *object.Error:
-				if obj.Message != expected {
-					t.Errorf("wrong error message. expected=%q, got=%q",
-						expected, obj.Message)
-				}
-			default:
-				t.Errorf("object is not Error. got=%T (%+v) <= %s", evaluated, evaluated, tt.input)
+			obj, ok := evaluated.(*object.String)
+			if !ok {
+				t.Error("Eval Error: not string", evaluated, "<=", tt.input)
 			}
+			if obj.Value != expected {
+				t.Errorf("wrong string. expected=%q, got=%q",
+					expected, obj.Value)
+			}
+		case float64:
+			testFloatObject(t, evaluated, expected)
+		default:
+			t.Errorf("wrong test type. expected=%q, got=%q", expected, evaluated)
 		}
 	}
 }
