@@ -25,4 +25,5 @@ go.work
 tmp/
 
 thingscript
+thingscript.exe
 cover.out

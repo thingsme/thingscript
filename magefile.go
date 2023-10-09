@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
 	_ "github.com/magefile/mage/mage"
@@ -23,8 +24,13 @@ func Build() error {
 		"CGO_ENABLE":  "0",
 	}
 
+	outname := "./thingscript"
+	if runtime.GOOS == "windows" {
+		outname = "./thingscript.exe"
+	}
+
 	args := []string{"build"}
-	args = append(args, "-o", "./thingscript")
+	args = append(args, "-o", outname)
 
 	fmt.Println("Build thingscript...")
 	err := sh.RunWithV(env, "go", args...)
