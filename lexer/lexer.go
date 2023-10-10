@@ -244,7 +244,11 @@ func (l *Lexer) skipLineComment() string {
 	for l.ch != 0 && l.ch != '\n' {
 		l.readChar()
 	}
-	return string(l.input[position : l.position-1])
+	if position < l.position {
+		return string(l.input[position:l.position])
+	} else {
+		return ""
+	}
 }
 
 func (l *Lexer) skipBlockComment() string {
