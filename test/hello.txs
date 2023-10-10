@@ -1,2 +1,2 @@
-who := "World"
-import("fmt").printf("Hello, %s?", who)
+who := "World";
+import("fmt").printf("Hello, %s?", who);

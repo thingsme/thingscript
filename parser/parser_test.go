@@ -345,6 +345,40 @@ func TestParsingArrayLiterals(t *testing.T) {
 	testInfixExpression(t, array.Elements[2], 3, "+", 3)
 }
 
+func TestParsingArrayLiteralsWithAccess(t *testing.T) {
+	input := "[1, 2 * 2, 3 + 3].length"
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParseErrors(t, p)
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("statement not ast.ExpressionStatement. got=%T", program.Statements[0])
+	}
+	access, ok := stmt.Expression.(*ast.AccessExpression)
+	if !ok {
+		t.Fatalf("expression not ast.AccessExpression. got=%T", stmt.Expression)
+	}
+
+	array, ok := access.Left.(*ast.ArrayLiteral)
+	if !ok {
+		t.Fatalf("expression not ast.ArrayLiteral. got=%T", access.Left)
+	}
+	if len(array.Elements) != 3 {
+		t.Fatalf("len(array.Elements) not 3, got=%d", len(array.Elements))
+	}
+	testIntegerLiteral(t, array.Elements[0], 1)
+	testInfixExpression(t, array.Elements[1], 2, "*", 2)
+	testInfixExpression(t, array.Elements[2], 3, "+", 3)
+
+	ident, ok := access.Right.(*ast.Identifier)
+	if !ok {
+		t.Fatalf("expression not ast.Identifier. got=%T", access.Right)
+	}
+	testIdentifier(t, ident, "length")
+}
+
 func TestParsingHashLiteral(t *testing.T) {
 	input := `{"one": 1, "two": 2, "three": 3}`
 	l := lexer.New(input)

@@ -1,0 +1,12 @@
+out := import("fmt");
+sum := "";
+["1","2","3"].foreach(func(idx,elm){
+    sum += elm
+    out.println(idx, ":", elm, "=>", sum)
+})
+
+// expect output
+//
+// 0 : 1 => 1
+// 1 : 2 => 12
+// 2 : 3 => 123

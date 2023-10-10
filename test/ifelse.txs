@@ -1,11 +1,10 @@
-var a = 0
-var b = 0
-var c = 0
+out := import("fmt");
 
-out := import("fmt")
-arr := [1,2,3,4,5,6,7,8,9,10]
+var a = 0;
+var b = 0;
+var c = 0;
 
-arr.foreach( func(idx, x){
+[1,2,3,4,5,6,7,8,9,10].foreach( func(idx, x){
     if x % 3 == 0 {
         a += x
     } else if x % 3 == 1 {
@@ -15,5 +14,7 @@ arr.foreach( func(idx, x){
     }
 })
 
-// expect result: a: 18 b: 22 c: 15 
-out.println("a:", a, "b:", b, "c:", c)
+out.println("a:", a, "b:", b, "c:", c);
+
+// output:
+// a: 18 b: 22 c: 15 

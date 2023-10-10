@@ -240,6 +240,38 @@ func TestArrayLiterals(t *testing.T) {
 	testIntegerObject(t, result.Elements[2], 9)
 }
 
+func TestArrayLiteralsAccess(t *testing.T) {
+	input := `[1, 2 + 2, 3 * 3].length`
+	evaluated := testEval(input)
+	result, ok := evaluated.(*object.Integer)
+	if !ok {
+		t.Fatalf("object is not Array. got=%T (%+v)", evaluated, evaluated)
+	}
+	if result.Value != 3 {
+		t.Fatalf("array has wrong num of elements, got=%d", result.Value)
+	}
+}
+
+func TestArrayLiteralAccessCall(t *testing.T) {
+	input := `
+		out := import("fmt");
+		sum := "";
+		["1","2","3"].foreach(func(idx,elm){
+			sum += elm
+			out.println(idx, ":", elm, "=>", sum)
+		})
+		sum
+	`
+	evaluated := testEval(input)
+	result, ok := evaluated.(*object.String)
+	if !ok {
+		t.Fatalf("object is not String. got=%T (%+v)", evaluated, evaluated)
+	}
+	if result.Value != "123" {
+		t.Fatalf("array has wrong num of elements, got=%s", result.Value)
+	}
+}
+
 func TestImmediateIfExpression(t *testing.T) {
 	tests := []struct {
 		input    string
