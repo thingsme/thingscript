@@ -458,17 +458,31 @@ func (p *Parser) parseArrayLiteral() ast.Expression {
 func (p *Parser) parseIfExpression() ast.Expression {
 	expression := &ast.IfExpression{Token: p.curToken}
 	p.nextToken()
-	expression.Condition = p.parseExpression(LOWEST)
+	expression.Condition = []ast.Expression{p.parseExpression(LOWEST)}
 	if !p.expectPeek(token.LBRACE) {
 		return nil
 	}
-	expression.Consequence = p.parseBlockStatement()
-	if p.peekTokenIs(token.ELSE) {
+	expression.Consequence = []*ast.BlockStatement{p.parseBlockStatement()}
+
+	for p.peekTokenIs(token.ELSE) {
 		p.nextToken()
-		if !p.expectPeek(token.LBRACE) {
+		if p.peekTokenIs(token.IF) { // else if
+			p.nextToken()
+			p.nextToken()
+			condition := p.parseExpression(LOWEST)
+			if !p.expectPeek(token.LBRACE) {
+				return nil
+			}
+			consequence := p.parseBlockStatement()
+			expression.Condition = append(expression.Condition, condition)
+			expression.Consequence = append(expression.Consequence, consequence)
+			continue
+		} else if p.expectPeek(token.LBRACE) { // else
+			expression.Alternative = p.parseBlockStatement()
+			break
+		} else {
 			return nil
 		}
-		expression.Alternative = p.parseBlockStatement()
 	}
 	return expression
 }

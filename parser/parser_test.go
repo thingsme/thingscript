@@ -536,11 +536,11 @@ func testIntegerLiteral(t *testing.T, il ast.Expression, value int64) bool {
 		strValue = fmt.Sprintf("0x%x", value)
 	} else if strings.HasPrefix(literal, "0b") {
 		strValue = fmt.Sprintf("0b%b", value)
-	} else if strings.HasPrefix(literal, "0") {
+	} else if strings.HasPrefix(literal, "0") && len(literal) > 1 {
 		strValue = fmt.Sprintf("0%o", value)
 	}
 	if integ.TokenLiteral() != strValue {
-		t.Errorf("literal.TokenLiteral not %d, got=%s", value, integ.TokenLiteral())
+		t.Errorf("literal.TokenLiteral not %s, got=%s", strValue, integ.TokenLiteral())
 		return false
 	}
 	return true
@@ -688,16 +688,16 @@ func TestIfExpression(t *testing.T) {
 	if !ok {
 		t.Fatalf("stmt.Expression is not ast.IfStatement, got=%T", stmt.Expression)
 	}
-	if !testInfixExpression(t, exp.Condition, "x", "<", "y") {
+	if !testInfixExpression(t, exp.Condition[0], "x", "<", "y") {
 		return
 	}
-	if len(exp.Consequence.Statements) != 1 {
-		t.Errorf("consequence is not 1 statements. got=%d", len(exp.Consequence.Statements))
+	if len(exp.Consequence[0].Statements) != 1 {
+		t.Errorf("consequence is not 1 statements. got=%d", len(exp.Consequence[0].Statements))
 	}
-	consequence, ok := exp.Consequence.Statements[0].(*ast.ExpressionStatement)
+	consequence, ok := exp.Consequence[0].Statements[0].(*ast.ExpressionStatement)
 	if !ok {
 		t.Fatalf("Statements[0] is not ast.ExpressionStatement, got=%T",
-			exp.Consequence.Statements[0])
+			exp.Consequence[0].Statements[0])
 	}
 	if !testIdentifier(t, consequence.Expression, "x") {
 		return
@@ -708,7 +708,7 @@ func TestIfExpression(t *testing.T) {
 }
 
 func TestIfElseExpression(t *testing.T) {
-	input := `if (x < y) { x } else { y }`
+	input := `if (x < y) { x } else if x == y { 0 } else { y }`
 	l := lexer.New(input)
 	p := New(l)
 	program := p.ParseProgram()
@@ -727,20 +727,36 @@ func TestIfElseExpression(t *testing.T) {
 	if !ok {
 		t.Fatalf("stmt.Expression is not ast.IfStatement, got=%T", stmt.Expression)
 	}
-	if !testInfixExpression(t, exp.Condition, "x", "<", "y") {
+	if !testInfixExpression(t, exp.Condition[0], "x", "<", "y") {
 		return
 	}
-	if len(exp.Consequence.Statements) != 1 {
-		t.Errorf("consequence is not 1 statements. got=%d", len(exp.Consequence.Statements))
+	if len(exp.Consequence[0].Statements) != 1 {
+		t.Errorf("consequence is not 1 statements. got=%d", len(exp.Consequence[0].Statements))
 	}
-	consequence, ok := exp.Consequence.Statements[0].(*ast.ExpressionStatement)
+	consequence, ok := exp.Consequence[0].Statements[0].(*ast.ExpressionStatement)
 	if !ok {
 		t.Fatalf("Statements[0] is not ast.ExpressionStatement, got=%T",
-			exp.Consequence.Statements[0])
+			exp.Consequence[0].Statements[0])
 	}
 	if !testIdentifier(t, consequence.Expression, "x") {
 		return
 	}
+
+	if !testInfixExpression(t, exp.Condition[1], "x", "==", "y") {
+		return
+	}
+	if len(exp.Consequence[1].Statements) != 1 {
+		t.Errorf("consequence is not 1 statements. got=%d", len(exp.Consequence[1].Statements))
+	}
+	consequence, ok = exp.Consequence[1].Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("Statements[0] is not ast.ExpressionStatement, got=%T",
+			exp.Consequence[1].Statements[0])
+	}
+	if !testIntegerLiteral(t, consequence.Expression, 0) {
+		return
+	}
+
 	if exp.Alternative == nil {
 		t.Errorf("exp.Alternative.Statements was nil")
 	}

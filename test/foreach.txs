@@ -1,0 +1,9 @@
+out := import("fmt")
+
+arr := [1,2,3]
+
+out.println("length :", arr.length)
+
+arr.foreach(func(idx, elm){
+    out.println(idx, "=", elm)
+})

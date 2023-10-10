@@ -241,14 +241,10 @@ func (l *Lexer) skipWhitespace() {
 
 func (l *Lexer) skipLineComment() string {
 	position := l.position + 1
-	for l.ch != 0 {
-		if l.ch == '\n' {
-			l.readChar()
-			return string(l.input[position : l.position-1])
-		}
+	for l.ch != 0 && l.ch != '\n' {
 		l.readChar()
 	}
-	return ""
+	return string(l.input[position : l.position-1])
 }
 
 func (l *Lexer) skipBlockComment() string {

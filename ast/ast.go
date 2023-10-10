@@ -217,8 +217,8 @@ func (ie *InfixExpression) String() string {
 
 type IfExpression struct {
 	Token       token.Token
-	Condition   Expression
-	Consequence *BlockStatement
+	Condition   []Expression
+	Consequence []*BlockStatement
 	Alternative *BlockStatement
 }
 
@@ -228,9 +228,16 @@ func (ie *IfExpression) String() string {
 	var out bytes.Buffer
 	out.WriteString("if")
 	out.WriteString(" ")
-	out.WriteString(ie.Condition.String())
+	out.WriteString(ie.Condition[0].String())
 	out.WriteString(" { ")
-	out.WriteString(ie.Consequence.String())
+	out.WriteString(ie.Consequence[0].String())
+	for n, nf := range ie.Condition[1:] {
+		out.WriteString("else if")
+		out.WriteString(" ")
+		out.WriteString(nf.String())
+		out.WriteString(" { ")
+		out.WriteString(ie.Consequence[1+n].String())
+	}
 	if ie.Alternative != nil {
 		out.WriteString("} else { ")
 		out.WriteString(ie.Alternative.String())

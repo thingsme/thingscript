@@ -435,6 +435,9 @@ func TestIfElseExpression(t *testing.T) {
 		{`if "abc" > "bcd" { 10 } else {20}`, 20},
 		{`if "abc" != "bcd" { 10 } else {20}`, 10},
 		{`if "abc" == "bcd" { 10 } else {20}`, 20},
+		{`if 1 % 3 == 0 { 10 } else if 4 % 2 == 0 { 20 } else { 30 }`, 20},
+		{`if 3 % 3 == 0 { 10 } else if 4 % 2 == 0 { 20 } else { 30 }`, 10},
+		{`if 1 % 3 == 0 { 10 } else if 3 % 2 == 0 { 20 } else { 30 }`, 30},
 		{"if nil { 10 } else { 20 }", 20},
 	}
 	for _, tt := range tests {
