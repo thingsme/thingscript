@@ -1,8 +1,8 @@
-out := import("fmt");
+out := import("fmt")
 
-var a = 0;
-var b = 0;
-var c = 0;
+var a = 0
+var b = 0
+var c = 0
 
 [1,2,3,4,5,6,7,8,9,10].foreach( func(idx, x){
     if x % 3 == 0 {
@@ -14,7 +14,7 @@ var c = 0;
     }
 })
 
-out.println("a:", a, "b:", b, "c:", c);
+out.println("a:", a, "b:", b, "c:", c)
 
 // output:
 // a: 18 b: 22 c: 15 

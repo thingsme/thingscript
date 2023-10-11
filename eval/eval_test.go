@@ -254,8 +254,8 @@ func TestArrayLiteralsAccess(t *testing.T) {
 
 func TestArrayLiteralAccessCall(t *testing.T) {
 	input := `
-		out := import("fmt");
-		sum := "";
+		out := import("fmt")
+		sum := ""
 		["1","2","3"].foreach(func(idx,elm){
 			sum += elm
 			out.println(idx, ":", elm, "=>", sum)

@@ -1,6 +1,6 @@
-out := import("fmt");
+out := import("fmt")
 
-out.println("length :", [1,2,3].length);
+out.println("length :", [1,2,3].length)
 // output: length: 3
 
 [1,2,3].foreach(func(idx, elm){

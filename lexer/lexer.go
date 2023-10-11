@@ -11,10 +11,18 @@ type Lexer struct {
 	position     int
 	readPosition int
 	ch           rune
+	tabSize      int
+
+	prevToken token.Token
+	Position  token.Position
 }
 
 func New(input string) *Lexer {
-	l := &Lexer{input: []rune(input)}
+	l := &Lexer{
+		input:    []rune(input),
+		tabSize:  4,
+		Position: token.Position{Line: 1, Column: 0},
+	}
 	l.readChar()
 	return l
 }
@@ -22,6 +30,8 @@ func New(input string) *Lexer {
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
 	l.skipWhitespace()
+	position := l.Position
+	doReadNext := true
 	switch l.ch {
 	case '=':
 		if l.peekChar() == '=' {
@@ -136,15 +146,24 @@ func (l *Lexer) NextToken() token.Token {
 		if isLetter(l.ch) {
 			tok.Literal = l.readIdentifier()
 			tok.Type = token.LookupIdent(tok.Literal)
-			return tok
+			doReadNext = false
 		} else if isDigit(l.ch) {
 			tok.Literal, tok.Type = l.readNumber()
-			return tok
+			doReadNext = false
 		} else {
 			tok = newToken(token.ILLEGAL, l.ch)
 		}
 	}
-	l.readChar()
+	tok.Position = position
+	if l.prevToken.Position.Line != tok.Position.Line {
+		// 'tok' is the first of the current line
+		// which can not be evaluated as an infix operator
+		tok.NoInfix = true
+	}
+	if doReadNext {
+		l.readChar()
+	}
+	l.prevToken = tok
 	return tok
 }
 
@@ -223,6 +242,18 @@ func (l *Lexer) readChar() {
 	}
 	l.position = l.readPosition
 	l.readPosition += 1
+	if l.ch == '\n' {
+		l.Position.Line++
+		l.Position.Column = 0
+	} else {
+		if l.ch == '\t' {
+			l.Position.Column += l.tabSize
+		} else if l.ch == '\r' {
+			// ignore
+		} else {
+			l.Position.Column++
+		}
+	}
 }
 
 func (l *Lexer) peekChar() rune {

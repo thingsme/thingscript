@@ -1,10 +1,23 @@
 package token
 
+import "fmt"
+
 type TokenType string
 
 type Token struct {
-	Type    TokenType
-	Literal string
+	Type     TokenType
+	Literal  string
+	NoInfix  bool
+	Position Position
+}
+
+type Position struct {
+	Line   int
+	Column int
+}
+
+func (p Position) String() string {
+	return fmt.Sprintf("Ln %d, Col %d", p.Line, p.Column)
 }
 
 const (
