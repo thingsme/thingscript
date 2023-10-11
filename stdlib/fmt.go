@@ -29,14 +29,12 @@ func WithWriter(w io.Writer) Option {
 }
 
 type fmtPkg struct {
+	object.Package
 	out io.Writer
 }
 
-func (fp *fmtPkg) Name() string {
-	return "fmt"
-}
-
-func (fp *fmtPkg) Member(member string) func(object.Object, ...object.Object) object.Object {
+func (fp *fmtPkg) Name() string { return "fmt" }
+func (fp *fmtPkg) Member(member string) object.MemberFunc {
 	switch member {
 	case "println":
 		return func(receiver object.Object, args ...object.Object) object.Object {

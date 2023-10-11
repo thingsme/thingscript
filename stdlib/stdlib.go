@@ -7,21 +7,20 @@ import (
 
 func Packages() []object.Package {
 	return []object.Package{
-		&integers{},
-		&floats{},
-		&booleans{},
-		&strings{},
-		&arrays{},
-		&hashmap{},
 		FmtPackage(),
 	}
 }
 
-type integers struct {
+func init() {
+	object.StringMemberFunc = Strings
+	object.IntegerMemberFunc = Integers
+	object.FloatMemberFunc = Floats
+	object.BooleanMemberFunc = Booleans
+	object.ArrayMemberFunc = Arrays
+	object.HashMapMemberFunc = HashMaps
 }
 
-func (ip *integers) Name() string { return object.PKG_INTEGER }
-func (ip *integers) Member(member string) func(object.Object, ...object.Object) object.Object {
+func Integers(member string) object.MemberFunc {
 	switch member {
 	case "type":
 		return func(receiver object.Object, args ...object.Object) object.Object {
@@ -35,11 +34,7 @@ func (ip *integers) Member(member string) func(object.Object, ...object.Object) 
 	}
 }
 
-type floats struct {
-}
-
-func (fp *floats) Name() string { return object.PKG_FLOAT }
-func (fp *floats) Member(member string) func(object.Object, ...object.Object) object.Object {
+func Floats(member string) object.MemberFunc {
 	switch member {
 	case "type":
 		return func(receiver object.Object, args ...object.Object) object.Object {
@@ -53,11 +48,7 @@ func (fp *floats) Member(member string) func(object.Object, ...object.Object) ob
 	}
 }
 
-type booleans struct {
-}
-
-func (fp *booleans) Name() string { return object.PKG_BOOLEAN }
-func (fp *booleans) Member(member string) func(object.Object, ...object.Object) object.Object {
+func Booleans(member string) object.MemberFunc {
 	switch member {
 	case "type":
 		return func(receiver object.Object, args ...object.Object) object.Object {
@@ -71,11 +62,7 @@ func (fp *booleans) Member(member string) func(object.Object, ...object.Object) 
 	}
 }
 
-type strings struct {
-}
-
-func (sp *strings) Name() string { return object.PKG_STRING }
-func (sp *strings) Member(member string) func(object.Object, ...object.Object) object.Object {
+func Strings(member string) object.MemberFunc {
 	switch member {
 	case "type":
 		return func(receiver object.Object, args ...object.Object) object.Object {
@@ -97,12 +84,7 @@ func (sp *strings) Member(member string) func(object.Object, ...object.Object) o
 	}
 }
 
-type hashmap struct {
-}
-
-func (sp *hashmap) Name() string { return object.PKG_HASHMAP }
-
-func (hp *hashmap) Member(member string) func(object.Object, ...object.Object) object.Object {
+func HashMaps(member string) object.MemberFunc {
 	switch member {
 	case "type":
 		return func(receiver object.Object, args ...object.Object) object.Object {
@@ -124,11 +106,7 @@ func (hp *hashmap) Member(member string) func(object.Object, ...object.Object) o
 	}
 }
 
-type arrays struct {
-}
-
-func (sp *arrays) Name() string { return object.PKG_ARRAY }
-func (sp *arrays) Member(member string) func(object.Object, ...object.Object) object.Object {
+func Arrays(member string) object.MemberFunc {
 	switch member {
 	case "type":
 		return func(receiver object.Object, args ...object.Object) object.Object {

@@ -71,12 +71,12 @@ func TestUndefinedMemberError(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{`v := 10; v.undefined(1)`, `function "undefined" not found in "$integer"`},
-		{`v := 12.3; v.undefined(1)`, `function "undefined" not found in "$float"`},
-		{`v := "1234"; v.undefined(1)`, `function "undefined" not found in "$string"`},
-		{`v := true; v.undefined(1)`, `function "undefined" not found in "$boolean"`},
-		{`v := [1,2]; v.undefined(1)`, `function "undefined" not found in "$array"`},
-		{`v := {"a":1,"b":2.3}; v.undefined(1)`, `function "undefined" not found in "$hashmap"`},
+		{`v := 10; v.undefined(1)`, `function "undefined" not found in "INTEGER"`},
+		{`v := 12.3; v.undefined(1)`, `function "undefined" not found in "FLOAT"`},
+		{`v := "1234"; v.undefined(1)`, `function "undefined" not found in "STRING"`},
+		{`v := true; v.undefined(1)`, `function "undefined" not found in "BOOLEAN"`},
+		{`v := [1,2]; v.undefined(1)`, `function "undefined" not found in "ARRAY"`},
+		{`v := {"a":1,"b":2.3}; v.undefined(1)`, `function "undefined" not found in "HASHMAP"`},
 	}
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
@@ -132,7 +132,7 @@ func TestTypeError(t *testing.T) {
 		{`v := [1,2,3]; v.init(1)`, "wrong number of arguments. got=1, want=0"},
 		{`v := [1,2,3]; v.last(1)`, "wrong number of arguments. got=1, want=0"},
 		{`v := {"a":1,"b":2.3}; v.type(1)`, "wrong number of arguments. got=1, want=0"},
-		{`v := {"a":1,"b":2.3}; v.head(1)`, "function \"head\" not found in \"$hashmap\""},
+		{`v := {"a":1,"b":2.3}; v.head(1)`, "function \"head\" not found in \"HASHMAP\""},
 	}
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
@@ -201,8 +201,7 @@ func TestPush(t *testing.T) {
 		&object.Integer{Value: 3},
 	}}
 
-	p := &arrays{}
-	ret := p.Member("push")(arr, &object.Integer{Value: 4})
+	ret := Arrays("push")(arr, &object.Integer{Value: 4})
 	checkIntegerArray(t, ret, []int64{1, 2, 3, 4})
 }
 
@@ -212,9 +211,8 @@ func TestInitLast(t *testing.T) {
 		&object.Integer{Value: 2},
 		&object.Integer{Value: 3},
 	}}
-	p := &arrays{}
-	initRet := p.Member("init")(arr)
-	lastRet := p.Member("last")(arr)
+	initRet := Arrays("init")(arr)
+	lastRet := Arrays("last")(arr)
 
 	checkIntegerArray(t, initRet, []int64{1, 2})
 	checkInteger(t, lastRet, 3)
@@ -226,9 +224,8 @@ func TestHeadTail(t *testing.T) {
 		&object.Integer{Value: 2},
 		&object.Integer{Value: 3},
 	}}
-	p := &arrays{}
-	headRet := p.Member("head")(arr)
-	tailRet := p.Member("tail")(arr)
+	headRet := Arrays("head")(arr)
+	tailRet := Arrays("tail")(arr)
 
 	checkInteger(t, headRet, 1)
 	checkIntegerArray(t, tailRet, []int64{2, 3})

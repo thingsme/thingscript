@@ -22,29 +22,35 @@ const (
 	HASHMAP_OBJ      = "HASHMAP"
 	FUNCTION_OBJ     = "FUNCTION"
 	BUILTIN_OBJ      = "BUILTIN"
-	IMPORT_OBJ       = "IMPORT"
+	PACKAGE_OBJ      = "PACKAGE"
 	NULL_OBJ         = "NULL"
 	RETURN_VALUE_OBJ = "RETURN_VALUE"
 	BREAK_OBJ        = "BREAK"
 	ERROR_OBJ        = "ERROR"
 )
 
+type MemberFunc func(receiver Object, args ...Object) Object
+type FunctionFunc func(args ...Object) Object
+
 type Object interface {
 	Type() ObjectType
+	Member(name string) MemberFunc
 	Inspect() string
 }
 
 type Null struct{}
 
-func (n *Null) Type() ObjectType { return NULL_OBJ }
-func (n *Null) Inspect() string  { return "null" }
+func (n *Null) Type() ObjectType              { return NULL_OBJ }
+func (n *Null) Inspect() string               { return "null" }
+func (n *Null) Member(name string) MemberFunc { return nil }
 
 type Error struct {
 	Message string
 }
 
-func (e *Error) Type() ObjectType { return ERROR_OBJ }
-func (e *Error) Inspect() string  { return "ERROR: " + e.Message }
+func (e *Error) Type() ObjectType              { return ERROR_OBJ }
+func (e *Error) Inspect() string               { return "ERROR: " + e.Message }
+func (e *Error) Member(name string) MemberFunc { return nil }
 
 func Errorf(format string, args ...any) *Error {
 	return &Error{Message: fmt.Sprintf(format, args...)}
@@ -56,6 +62,14 @@ type Integer struct {
 
 func (i *Integer) Type() ObjectType { return INTEGER_OBJ }
 func (i *Integer) Inspect() string  { return fmt.Sprintf("%d", i.Value) }
+func (i *Integer) Member(name string) MemberFunc {
+	if IntegerMemberFunc != nil {
+		return IntegerMemberFunc(name)
+	}
+	return nil
+}
+
+var IntegerMemberFunc func(string) MemberFunc
 
 type Float struct {
 	Value float64
@@ -63,6 +77,14 @@ type Float struct {
 
 func (f *Float) Type() ObjectType { return FLOAT_OBJ }
 func (f *Float) Inspect() string  { return fmt.Sprintf("%f", f.Value) }
+func (f *Float) Member(name string) MemberFunc {
+	if FloatMemberFunc != nil {
+		return FloatMemberFunc(name)
+	}
+	return nil
+}
+
+var FloatMemberFunc func(string) MemberFunc
 
 type Boolean struct {
 	Value bool
@@ -70,6 +92,14 @@ type Boolean struct {
 
 func (b *Boolean) Type() ObjectType { return BOOLEAN_OBJ }
 func (b *Boolean) Inspect() string  { return fmt.Sprintf("%t", b.Value) }
+func (b *Boolean) Member(name string) MemberFunc {
+	if BooleanMemberFunc != nil {
+		return BooleanMemberFunc(name)
+	}
+	return nil
+}
+
+var BooleanMemberFunc func(string) MemberFunc
 
 type String struct {
 	Value string
@@ -77,36 +107,29 @@ type String struct {
 
 func (s *String) Type() ObjectType { return STRING_OBJ }
 func (s *String) Inspect() string  { return s.Value }
-
-type Array struct {
-	Elements []Object
-}
-
-func (ao *Array) Type() ObjectType { return ARRAY_OBJ }
-func (ao *Array) Inspect() string {
-	var out bytes.Buffer
-	elements := []string{}
-	for _, e := range ao.Elements {
-		elements = append(elements, e.Inspect())
+func (b *String) Member(name string) MemberFunc {
+	if StringMemberFunc != nil {
+		return StringMemberFunc(name)
 	}
-	out.WriteString("[")
-	out.WriteString(strings.Join(elements, ", "))
-	out.WriteString("]")
-	return out.String()
+	return nil
 }
+
+var StringMemberFunc func(string) MemberFunc
 
 type ReturnValue struct {
 	Value Object
 }
 
-func (rv *ReturnValue) Type() ObjectType { return RETURN_VALUE_OBJ }
-func (rv *ReturnValue) Inspect() string  { return rv.Value.Inspect() }
+func (rv *ReturnValue) Type() ObjectType              { return RETURN_VALUE_OBJ }
+func (rv *ReturnValue) Inspect() string               { return rv.Value.Inspect() }
+func (rv *ReturnValue) Member(name string) MemberFunc { return nil }
 
 type Break struct {
 }
 
-func (br *Break) Type() ObjectType { return BREAK_OBJ }
-func (br *Break) Inspect() string  { return "break" }
+func (br *Break) Type() ObjectType              { return BREAK_OBJ }
+func (br *Break) Inspect() string               { return "break" }
+func (br *Break) Member(name string) MemberFunc { return nil }
 
 type Function struct {
 	Parameters []*ast.Identifier
@@ -129,15 +152,41 @@ func (f *Function) Inspect() string {
 	out.WriteString("}")
 	return out.String()
 }
-
-type BuiltinFunction func(args ...Object) Object
+func (br *Function) Member(name string) MemberFunc { return nil }
 
 type Builtin struct {
-	Fn BuiltinFunction
+	Func FunctionFunc
 }
 
-func (b *Builtin) Type() ObjectType { return BUILTIN_OBJ }
-func (b *Builtin) Inspect() string  { return "builtin function" }
+func (b *Builtin) Type() ObjectType              { return BUILTIN_OBJ }
+func (b *Builtin) Inspect() string               { return "builtin" }
+func (b *Builtin) Member(name string) MemberFunc { return nil }
+
+type Array struct {
+	Elements []Object
+}
+
+func (ao *Array) Type() ObjectType { return ARRAY_OBJ }
+func (ao *Array) Inspect() string {
+	var out bytes.Buffer
+	elements := []string{}
+	for _, e := range ao.Elements {
+		elements = append(elements, e.Inspect())
+	}
+	out.WriteString("[")
+	out.WriteString(strings.Join(elements, ", "))
+	out.WriteString("]")
+	return out.String()
+}
+
+func (ao *Array) Member(name string) MemberFunc {
+	if ArrayMemberFunc != nil {
+		return ArrayMemberFunc(name)
+	}
+	return nil
+}
+
+var ArrayMemberFunc func(name string) MemberFunc
 
 type HashKey struct {
 	Type  ObjectType
@@ -204,11 +253,24 @@ func (h *HashMap) Inspect() string {
 	return out.String()
 }
 
-type Import struct {
-	Name string
+func (h *HashMap) Member(name string) MemberFunc {
+	if HashMapMemberFunc != nil {
+		return HashMapMemberFunc(name)
+	}
+	return nil
 }
 
-func (p *Import) Type() ObjectType { return IMPORT_OBJ }
-func (p *Import) Inspect() string {
-	return fmt.Sprintf("import %q", p.Name)
+var HashMapMemberFunc func(name string) MemberFunc
+
+type PackageObj struct {
+	pkg Package
 }
+
+type Package interface {
+	Name() string
+	Member(name string) MemberFunc
+}
+
+func (p *PackageObj) Type() ObjectType              { return PACKAGE_OBJ }
+func (p *PackageObj) Inspect() string               { return fmt.Sprintf("import(%q)", p.pkg.Name()) }
+func (p *PackageObj) Member(name string) MemberFunc { return p.pkg.Member(name) }

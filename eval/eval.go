@@ -9,14 +9,6 @@ var (
 	NULL = &object.Null{}
 )
 
-var builtins = map[string]*object.Builtin{}
-
-func init() {
-	for _, v := range object.Builtins {
-		builtins[v.Name] = v.Builtin
-	}
-}
-
 func nativeBoolToBooleanObject(input bool) *object.Boolean {
 	if input {
 		return &object.Boolean{Value: true}
@@ -269,7 +261,7 @@ func applyFunction(fn object.Object, args []object.Object) object.Object {
 		evaluated := Eval(fn.Body, extendedEnv)
 		return unwrapReturnValue(evaluated)
 	case *object.Builtin:
-		if ret := fn.Fn(args...); ret != nil {
+		if ret := fn.Func(args...); ret != nil {
 			return ret
 		}
 		return NULL
@@ -284,36 +276,28 @@ func evalAccessExpression(exp *ast.AccessExpression, env *object.Environment) ob
 		return left
 	}
 
-	var pkg object.Package
-	if pkgname, ok := object.PackageName(left); ok {
-		pkg, _ = env.Import(pkgname)
-	}
-	if pkg == nil {
-		return object.Errorf("package not found for %T (%+v)", left, left)
-	}
-
 	switch r := exp.Right.(type) {
 	case *ast.Identifier:
-		fn := pkg.Member(r.Value)
+		fn := left.Member(r.Value)
 		if fn == nil {
-			return object.Errorf("function %q not found in %q", r.Value, pkg.Name())
+			return object.Errorf("function %q not found in %q", r.Value, left.Type())
 		}
 		ret := fn(left)
 		return ret
 	case *ast.CallExpression:
 		fnIdent, ok := r.Function.(*ast.Identifier)
 		if !ok {
-			return object.Errorf("undefined %q in %q", r.Function.String(), pkg.Name())
+			return object.Errorf("undefined %q in %q", r.Function.String(), left.Type())
 		}
-		fn := pkg.Member(fnIdent.Value)
+		fn := left.Member(fnIdent.Value)
 		if fn == nil {
-			return object.Errorf("function %q not found in %q", fnIdent.Value, pkg.Name())
+			return object.Errorf("function %q not found in %q", fnIdent.Value, left.Type())
 		}
 		args := evalExpressions(r.Arguments, env)
 		ret := fn(left, args...)
 		return ret
 	default:
-		return object.Errorf("invalid access operator %q.(%T)", pkg.Name(), r)
+		return object.Errorf("invalid access operator %q.(%T)", left.Type(), r)
 	}
 }
 
@@ -478,11 +462,9 @@ func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object
 	if val, ok := env.Get(node.Value); ok {
 		return val
 	}
-
-	if builtin, ok := builtins[node.Value]; ok {
+	if builtin := env.Builtin(node.Value); builtin != nil {
 		return builtin
 	}
-
 	return object.Errorf("identifier not found: " + node.Value)
 }
 

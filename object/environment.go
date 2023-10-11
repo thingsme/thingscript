@@ -20,10 +20,37 @@ func NewEnclosedEnvironment(outer *Environment) *Environment {
 	return env
 }
 
+func (e *Environment) Builtin(name string) *Builtin {
+	switch name {
+	case "import":
+		return &Builtin{Func: func(args ...Object) Object {
+			if len(args) != 1 {
+				return Errorf("wrong number of arguements. got=%d, want=1", len(args))
+			}
+			name, ok := args[0].(*String)
+			if !ok {
+				return Errorf("argument to import must be string, got %s", args[0].Type())
+			}
+			if pkg, ok := e.packages[name.Value]; ok {
+				return &PackageObj{pkg: pkg}
+			} else {
+				return Errorf("package %q not found", name.Value)
+			}
+		}}
+	default:
+		return nil
+	}
+}
+
 func (e *Environment) Get(name string) (Object, bool) {
 	obj, ok := e.store[name]
 	if !ok && e.outer != nil {
 		obj, ok = e.outer.Get(name)
+	}
+	if !ok {
+		if pkg, ok := e.packages[name]; ok {
+			obj = &PackageObj{pkg: pkg}
+		}
 	}
 	return obj, ok
 }
@@ -45,9 +72,4 @@ func (e *Environment) Import(name string) (Package, bool) {
 		p, ok = e.outer.Import(name)
 	}
 	return p, ok
-}
-
-type Package interface {
-	Name() string
-	Member(string) func(receiver Object, args ...Object) Object
 }
