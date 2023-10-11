@@ -87,6 +87,63 @@ func TestVarStatements(t *testing.T) {
 	}
 }
 
+func TestVarTypeStatements(t *testing.T) {
+	tests := []struct {
+		input              string
+		expectedIdentifier string
+		expectedLiteral    string
+		expectedValue      any
+	}{
+		{`var iv int`, "iv", "int", int64(0)},
+		{`var fv float`, "fv", "float", 0.0},
+		{`var flag bool`, "flag", "bool", false},
+		{`var str string`, "str", "string", ""},
+		// TODO		{`var iv int = 10`, "iv", "int", int64(10)},
+		// TODO	error	{`var iv int = 12.3`, "iv", "int", int64(10)},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+
+		program := p.ParseProgram()
+		checkParseErrors(t, p)
+		if program == nil {
+			t.Fatalf("ParseProgram() returned nil")
+		}
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d", len(program.Statements))
+		}
+		stmt := program.Statements[0]
+		if !testVarStatement(t, stmt, tt.expectedIdentifier) {
+			return
+		}
+		val := stmt.(*ast.VarStatement).Value
+		if tt.expectedLiteral != val.TokenLiteral() {
+			t.Errorf("token liternal not %q, got=%q", tt.expectedLiteral, val.TokenLiteral())
+		}
+		switch val.TokenLiteral() {
+		case "int":
+			if val.(*ast.IntegerLiteral).Value != tt.expectedValue {
+				t.Errorf("value not %v, got=%d", tt.expectedValue, val.(*ast.IntegerLiteral).Value)
+			}
+		case "float":
+			if val.(*ast.FloatLiteral).Value != tt.expectedValue {
+				t.Errorf("value not %v", tt.expectedValue)
+			}
+		case "string":
+			if val.(*ast.StringLiteral).Value != tt.expectedValue {
+				t.Errorf("value not %v", tt.expectedValue)
+			}
+		case "bool":
+			if val.(*ast.Boolean).Value != tt.expectedValue {
+				t.Errorf("value not %v", tt.expectedValue)
+			}
+		default:
+			t.Fatalf("unknown type literal %q", val.TokenLiteral())
+		}
+	}
+}
+
 func checkParseErrors(t *testing.T, p *Parser) {
 	t.Helper()
 	errors := p.Errors()
@@ -555,6 +612,7 @@ func testFloatLiteral(t *testing.T, fl ast.Expression, value float64) bool {
 	return true
 }
 func testIntegerLiteral(t *testing.T, il ast.Expression, value int64) bool {
+	t.Helper()
 	integ, ok := il.(*ast.IntegerLiteral)
 	if !ok {
 		t.Fatalf("il is not *ast.IntegerLiteral, got=%T", il)

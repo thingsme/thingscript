@@ -30,6 +30,9 @@ const (
 	FLOAT  TokenType = "FLOAT"
 	STRING TokenType = "STRING"
 
+	// types
+	TYPEDECL TokenType = "TYPE"
+
 	// operator
 	ASSIGN   TokenType = "="
 	PLUS     TokenType = "+"
@@ -85,6 +88,10 @@ const (
 )
 
 var keywords = map[string]TokenType{
+	"int":    TYPEDECL,
+	"float":  TYPEDECL,
+	"string": TYPEDECL,
+	"bool":   TYPEDECL,
 	"func":   FUNC,
 	"var":    VAR,
 	"true":   TRUE,

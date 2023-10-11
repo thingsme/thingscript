@@ -232,14 +232,31 @@ func (p *Parser) parseVarStatement() *ast.VarStatement {
 		return nil
 	}
 	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
-	if !p.expectPeek(token.ASSIGN) {
-		return nil
+
+	if p.peekTokenIs(token.TYPEDECL) {
+		p.nextToken()
+		switch p.curToken.Literal {
+		case "int":
+			stmt.Value = &ast.IntegerLiteral{Token: p.curToken, Value: 0}
+		case "float":
+			stmt.Value = &ast.FloatLiteral{Token: p.curToken, Value: 0}
+		case "bool":
+			stmt.Value = &ast.Boolean{Token: p.curToken, Value: false}
+		case "string":
+			stmt.Value = &ast.StringLiteral{Token: p.curToken, Value: ""}
+		default:
+			return nil
+		}
 	}
-	p.nextToken()
-	stmt.Value = p.parseExpression(LOWEST)
-	if fl, ok := stmt.Value.(*ast.FunctionLiteral); ok {
-		fl.Name = stmt.Name.Value
+	if p.peekTokenIs(token.ASSIGN) {
+		p.nextToken() // =
+		p.nextToken() // right side
+		stmt.Value = p.parseExpression(LOWEST)
+		if fl, ok := stmt.Value.(*ast.FunctionLiteral); ok {
+			fl.Name = stmt.Name.Value
+		}
 	}
+
 	for p.peekTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}
@@ -299,7 +316,7 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 }
 
 func (p *Parser) noPrefixParseError(t token.TokenType) {
-	msg := fmt.Sprintf("[%s] no prefix parse function for %s found", p.l.Position, t)
+	msg := fmt.Sprintf("[%s] no prefix parse function for %q found", p.l.Position, t)
 	p.errors = append(p.errors, msg)
 }
 

@@ -1,0 +1,13 @@
+out := import("fmt")
+var sum int
+[1, 2, 3, 4, 5].foreach(func(idx,elm){
+    sum += elm
+    out.println(idx, ":", elm, "=>", sum)
+})
+out.println("sum:", sum)
+
+// expect output
+//
+// 0 : 1 => 1
+// 1 : 2 => 12
+// 2 : 3 => 123
