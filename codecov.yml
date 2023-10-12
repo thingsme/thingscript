@@ -1,4 +1,3 @@
 ignore:
-  - repl
   - "main.go"
   - "**/*_test.go"
