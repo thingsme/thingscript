@@ -1,6 +1,10 @@
 package object
 
+import "io"
+
 type Environment struct {
+	Stdout io.Writer
+
 	store    map[string]Object
 	outer    *Environment
 	packages map[string]Package
@@ -62,6 +66,7 @@ func (e *Environment) Set(name string, val Object) Object {
 
 func (e *Environment) RegisterPackages(pkgs ...Package) {
 	for _, p := range pkgs {
+		p.OnLoad(e)
 		e.packages[p.Name()] = p
 	}
 }

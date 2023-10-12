@@ -8,32 +8,22 @@ import (
 	"github.com/thingsme/thingscript/object"
 )
 
-type Option func(p any)
-
-func FmtPackage(opts ...Option) object.Package {
-	ret := &fmtPkg{
-		out: os.Stdout,
-	}
-	for _, o := range opts {
-		o(ret)
-	}
-	return ret
-}
-
-func WithWriter(w io.Writer) Option {
-	return func(pkg any) {
-		if p, ok := pkg.(*fmtPkg); ok {
-			p.out = w
-		}
-	}
-}
-
 type fmtPkg struct {
-	object.Package
 	out io.Writer
 }
 
+var _ object.Package = &fmtPkg{}
+
 func (fp *fmtPkg) Name() string { return "fmt" }
+
+func (fp *fmtPkg) OnLoad(env *object.Environment) {
+	if env.Stdout != nil {
+		fp.out = env.Stdout
+	} else {
+		fp.out = os.Stdout
+	}
+}
+
 func (fp *fmtPkg) Member(member string) object.MemberFunc {
 	switch member {
 	case "println":

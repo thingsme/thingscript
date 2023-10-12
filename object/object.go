@@ -269,6 +269,7 @@ type PackageObj struct {
 type Package interface {
 	Name() string
 	Member(name string) MemberFunc
+	OnLoad(*Environment)
 }
 
 func (p *PackageObj) Type() ObjectType              { return PACKAGE_OBJ }

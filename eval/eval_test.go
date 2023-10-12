@@ -791,7 +791,8 @@ func TestImports(t *testing.T) {
 		program := p.ParseProgram()
 		env := object.NewEnvironment()
 		out := &bytes.Buffer{}
-		env.RegisterPackages(stdlib.FmtPackage(stdlib.WithWriter(out)))
+		env.Stdout = out
+		env.RegisterPackages(stdlib.Packages()...)
 		ret := eval.Eval(program, env)
 		if ret != nil && ret.Type() == object.ERROR_OBJ {
 			t.Errorf("result is error; %s", ret.Inspect())

@@ -7,7 +7,7 @@ import (
 
 func Packages() []object.Package {
 	return []object.Package{
-		FmtPackage(),
+		&fmtPkg{},
 	}
 }
 
