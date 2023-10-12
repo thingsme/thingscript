@@ -144,7 +144,7 @@ func (f *Function) Inspect() string {
 	for _, p := range f.Parameters {
 		params = append(params, p.String())
 	}
-	out.WriteString("fn")
+	out.WriteString("func")
 	out.WriteString("(")
 	out.WriteString(strings.Join(params, ", "))
 	out.WriteString(") {\n")
@@ -262,16 +262,26 @@ func (h *HashMap) Member(name string) MemberFunc {
 
 var HashMapMemberFunc func(name string) MemberFunc
 
-type PackageObj struct {
-	pkg Package
+type Package struct {
+	pkg PackageImpl
 }
 
-type Package interface {
+type PackageImpl interface {
 	Name() string
 	Member(name string) MemberFunc
 	OnLoad(*Environment)
 }
 
-func (p *PackageObj) Type() ObjectType              { return PACKAGE_OBJ }
-func (p *PackageObj) Inspect() string               { return fmt.Sprintf("import(%q)", p.pkg.Name()) }
-func (p *PackageObj) Member(name string) MemberFunc { return p.pkg.Member(name) }
+func (p *Package) Type() ObjectType { return PACKAGE_OBJ }
+func (p *Package) Inspect() string {
+	if p.pkg == nil {
+		return "import()"
+	}
+	return fmt.Sprintf("import(%q)", p.pkg.Name())
+}
+func (p *Package) Member(name string) MemberFunc {
+	if p.pkg == nil {
+		return nil
+	}
+	return p.pkg.Member(name)
+}

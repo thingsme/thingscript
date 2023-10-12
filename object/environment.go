@@ -7,13 +7,13 @@ type Environment struct {
 
 	store    map[string]Object
 	outer    *Environment
-	packages map[string]Package
+	packages map[string]PackageImpl
 }
 
 func NewEnvironment() *Environment {
 	env := &Environment{
 		store:    make(map[string]Object),
-		packages: make(map[string]Package),
+		packages: make(map[string]PackageImpl),
 	}
 	return env
 }
@@ -36,7 +36,7 @@ func (e *Environment) Builtin(name string) *Builtin {
 				return Errorf("argument to import must be string, got %s", args[0].Type())
 			}
 			if pkg, ok := e.packages[name.Value]; ok {
-				return &PackageObj{pkg: pkg}
+				return &Package{pkg: pkg}
 			} else {
 				return Errorf("package %q not found", name.Value)
 			}
@@ -53,7 +53,7 @@ func (e *Environment) Get(name string) (Object, bool) {
 	}
 	if !ok {
 		if pkg, ok := e.packages[name]; ok {
-			obj = &PackageObj{pkg: pkg}
+			obj = &Package{pkg: pkg}
 		}
 	}
 	return obj, ok
@@ -64,14 +64,14 @@ func (e *Environment) Set(name string, val Object) Object {
 	return val
 }
 
-func (e *Environment) RegisterPackages(pkgs ...Package) {
+func (e *Environment) RegisterPackages(pkgs ...PackageImpl) {
 	for _, p := range pkgs {
 		p.OnLoad(e)
 		e.packages[p.Name()] = p
 	}
 }
 
-func (e *Environment) Import(name string) (Package, bool) {
+func (e *Environment) Import(name string) (PackageImpl, bool) {
 	p, ok := e.packages[name]
 	if !ok && e.outer != nil {
 		p, ok = e.outer.Import(name)

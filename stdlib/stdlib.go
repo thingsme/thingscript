@@ -5,8 +5,8 @@ import (
 	"github.com/thingsme/thingscript/object"
 )
 
-func Packages() []object.Package {
-	return []object.Package{
+func Packages() []object.PackageImpl {
+	return []object.PackageImpl{
 		&fmtPkg{},
 	}
 }

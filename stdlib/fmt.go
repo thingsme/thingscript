@@ -12,7 +12,7 @@ type fmtPkg struct {
 	out io.Writer
 }
 
-var _ object.Package = &fmtPkg{}
+var _ object.PackageImpl = &fmtPkg{}
 
 func (fp *fmtPkg) Name() string { return "fmt" }
 
