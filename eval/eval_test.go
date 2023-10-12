@@ -323,8 +323,9 @@ func TestDoWhileExpression(t *testing.T) {
 		input    string
 		expected any
 	}{
-		{`var sum = 0; var v = 0; do { v += 1; sum += v; } while v < 10 ; sum`, 55},
-		{`var sum = 0; var v = 0; do { v += 1; sum += v; if (v == 10) { break } } while v < 20; sum`, 55},
+		{`var sum = 1; var v = 0; do { v += 1; sum += v; } while v < 10 ; sum`, 56},
+		{`var sum int; var v = 0; do { v += 1; sum += v; } while v < 10 ; sum`, 55},
+		{`var sum int = 1; var v = 0; do { v += 1; sum += v; if (v == 10) { break } } while v < 20; sum`, 56},
 	}
 
 	for _, tt := range tests {

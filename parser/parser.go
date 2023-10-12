@@ -233,20 +233,22 @@ func (p *Parser) parseVarStatement() *ast.VarStatement {
 	}
 	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 
-	if p.peekTokenIs(token.TYPEDECL) {
+	if p.peekTokenIs(token.IDENT) {
+		typeDecl := &ast.TypeDeclare{}
 		p.nextToken()
-		switch p.curToken.Literal {
-		case "int":
-			stmt.Value = &ast.IntegerLiteral{Token: p.curToken, Value: 0}
-		case "float":
-			stmt.Value = &ast.FloatLiteral{Token: p.curToken, Value: 0}
-		case "bool":
-			stmt.Value = &ast.Boolean{Token: p.curToken, Value: false}
-		case "string":
-			stmt.Value = &ast.StringLiteral{Token: p.curToken, Value: ""}
-		default:
-			return nil
+		if p.peekTokenIs(token.DOT) {
+			// packaged types
+			typeDecl.Package = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+			p.nextToken() // .
+			if !p.expectPeek(token.IDENT) {
+				return nil
+			}
+			typeDecl.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+		} else {
+			// no-packaged types
+			typeDecl.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 		}
+		stmt.TypeDecl = typeDecl
 	}
 	if p.peekTokenIs(token.ASSIGN) {
 		p.nextToken() // =
@@ -257,6 +259,9 @@ func (p *Parser) parseVarStatement() *ast.VarStatement {
 		}
 	}
 
+	if stmt.TypeDecl == nil && stmt.Value == nil {
+		return nil
+	}
 	for p.peekTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}

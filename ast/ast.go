@@ -70,10 +70,28 @@ func (bs *BreakStatement) String() string {
 	return "break;"
 }
 
+type TypeDeclare struct {
+	Package *Identifier
+	Name    *Identifier
+}
+
+func (td *TypeDeclare) expressionNode() {}
+func (td *TypeDeclare) TokenLiteral() string {
+	if td.Package == nil {
+		return td.Name.TokenLiteral()
+	} else {
+		return fmt.Sprintf("%s.%s", td.Package.TokenLiteral(), td.Name.TokenLiteral())
+	}
+}
+func (td *TypeDeclare) String() string {
+	return td.TokenLiteral()
+}
+
 type VarStatement struct {
-	Token token.Token
-	Name  *Identifier
-	Value Expression
+	Token    token.Token
+	Name     *Identifier
+	TypeDecl *TypeDeclare
+	Value    Expression
 }
 
 func (ls *VarStatement) statementNode()       {}

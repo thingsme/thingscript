@@ -56,11 +56,28 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
 	case *ast.VarStatement:
-		evaluated := Eval(node.Value, env)
-		if isError(evaluated) {
-			return evaluated
+		var evaluated object.Object
+		if node.Value != nil {
+			evaluated = Eval(node.Value, env)
+			if isError(evaluated) {
+				return evaluated
+			}
 		}
-		env.Set(node.Name.Value, evaluated)
+		if node.TypeDecl == nil {
+			// infer the var type from value
+			env.Set(node.Name.Value, evaluated)
+		} else {
+			// explicitly declare the type of the var
+			if node.TypeDecl.Package == nil {
+				evaluated = env.Type("", node.TypeDecl.Name.Value, evaluated)
+			} else {
+				evaluated = env.Type(node.TypeDecl.Package.Value, node.TypeDecl.Name.Value, evaluated)
+			}
+			if isError(evaluated) {
+				return evaluated
+			}
+			env.Set(node.Name.Value, evaluated)
+		}
 	case *ast.ReturnStatement:
 		val := Eval(node.ReturnValue, env)
 		if isError(val) {

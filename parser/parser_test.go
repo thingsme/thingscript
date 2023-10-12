@@ -92,14 +92,15 @@ func TestVarTypeStatements(t *testing.T) {
 		input              string
 		expectedIdentifier string
 		expectedLiteral    string
-		expectedValue      any
+		expectedValue      string
 	}{
-		{`var iv int`, "iv", "int", int64(0)},
-		{`var fv float`, "fv", "float", 0.0},
-		{`var flag bool`, "flag", "bool", false},
+		{`var iv int`, "iv", "int", ""},
+		{`var fv float`, "fv", "float", ""},
+		{`var flag bool`, "flag", "bool", ""},
 		{`var str string`, "str", "string", ""},
-		// TODO		{`var iv int = 10`, "iv", "int", int64(10)},
-		// TODO	error	{`var iv int = 12.3`, "iv", "int", int64(10)},
+		{`var iv int = 10`, "iv", "int", "10"},
+		{`var fv float = 12.3`, "fv", "float", "12.3"},
+		{`var tm time.Time`, "tm", "time.Time", ""},
 	}
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
@@ -117,29 +118,19 @@ func TestVarTypeStatements(t *testing.T) {
 		if !testVarStatement(t, stmt, tt.expectedIdentifier) {
 			return
 		}
-		val := stmt.(*ast.VarStatement).Value
-		if tt.expectedLiteral != val.TokenLiteral() {
-			t.Errorf("token liternal not %q, got=%q", tt.expectedLiteral, val.TokenLiteral())
+		typ := stmt.(*ast.VarStatement).TypeDecl
+		if tt.expectedLiteral != typ.TokenLiteral() {
+			t.Errorf("token liternal not %q, got=%q", tt.expectedLiteral, typ.TokenLiteral())
 		}
-		switch val.TokenLiteral() {
-		case "int":
-			if val.(*ast.IntegerLiteral).Value != tt.expectedValue {
-				t.Errorf("value not %v, got=%d", tt.expectedValue, val.(*ast.IntegerLiteral).Value)
-			}
-		case "float":
-			if val.(*ast.FloatLiteral).Value != tt.expectedValue {
-				t.Errorf("value not %v", tt.expectedValue)
-			}
-		case "string":
-			if val.(*ast.StringLiteral).Value != tt.expectedValue {
-				t.Errorf("value not %v", tt.expectedValue)
-			}
-		case "bool":
-			if val.(*ast.Boolean).Value != tt.expectedValue {
-				t.Errorf("value not %v", tt.expectedValue)
-			}
-		default:
-			t.Fatalf("unknown type literal %q", val.TokenLiteral())
+		val := stmt.(*ast.VarStatement).Value
+		if tt.expectedValue == "" && val != nil {
+			t.Errorf("value literal should be nil, got=%q", val.String())
+		}
+		if tt.expectedValue != "" && val == nil {
+			t.Errorf("value literal should be %q, got=nil", tt.expectedValue)
+		}
+		if tt.expectedValue != "" && val != nil && tt.expectedValue != val.TokenLiteral() {
+			t.Errorf("wrong value literal, expected=%q, got=%q", tt.expectedValue, val.TokenLiteral())
 		}
 	}
 }
@@ -169,11 +160,11 @@ func testVarStatement(t *testing.T, s ast.Statement, name string) bool {
 		return false
 	}
 	if letStmt.Name.Value != name {
-		t.Errorf("letStmt.Name.Value not '%s'. got=%s", name, letStmt.Name.Value)
+		t.Errorf("varStmt.Name.Value not '%s'. got=%s", name, letStmt.Name.Value)
 		return false
 	}
 	if letStmt.Name.TokenLiteral() != name {
-		t.Errorf("letStmt.Name.TokenLiteral() not '%s'. got=%s", name, letStmt.Name.TokenLiteral())
+		t.Errorf("varStmt.Name.TokenLiteral() not '%s'. got=%s", name, letStmt.Name.TokenLiteral())
 		return false
 	}
 	return true

@@ -46,6 +46,50 @@ func (e *Environment) Builtin(name string) *Builtin {
 	}
 }
 
+func (e *Environment) Type(pkg string, name string, initial Object) Object {
+	if pkg == "" {
+		switch name {
+		case "int":
+			if initial != nil {
+				if in, ok := initial.(*Integer); ok {
+					return in
+				}
+				return Errorf("invalid int type %q", initial.Inspect())
+			}
+			return &Integer{Value: 0}
+		case "float":
+			if initial != nil {
+				if in, ok := initial.(*Float); ok {
+					return in
+				}
+				return Errorf("invalid float type %q", initial.Inspect())
+			}
+			return &Float{Value: 0.0}
+		case "string":
+			if initial != nil {
+				if in, ok := initial.(*String); ok {
+					return in
+				}
+				return Errorf("invalid string type %q", initial.Inspect())
+			}
+			return &String{Value: ""}
+		case "bool":
+			if initial != nil {
+				if in, ok := initial.(*Boolean); ok {
+					return in
+				}
+				return Errorf("invalid boolean type %q", initial.Inspect())
+			}
+			return &Boolean{Value: false}
+		default:
+			return &Null{}
+		}
+	}
+	// TODO - other types
+
+	return nil
+}
+
 func (e *Environment) Get(name string) (Object, bool) {
 	obj, ok := e.store[name]
 	if !ok && e.outer != nil {
