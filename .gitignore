@@ -24,6 +24,7 @@ go.work
 .DS_Store
 tmp/
 
+mage_output_file.go
 thingscript
 thingscript.exe
 cover.out
