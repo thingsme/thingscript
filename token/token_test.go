@@ -7,7 +7,7 @@ func TestTokens(t *testing.T) {
 		input    string
 		expected TokenType
 	}{
-		{"int", IDENT},
+		{"func", FUNC},
 		{"xyz", IDENT},
 	}
 

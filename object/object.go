@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math"
+	"strconv"
 	"strings"
 
 	"github.com/thingsme/thingscript/ast"
@@ -61,7 +62,7 @@ type Integer struct {
 }
 
 func (i *Integer) Type() ObjectType { return INTEGER_OBJ }
-func (i *Integer) Inspect() string  { return fmt.Sprintf("%d", i.Value) }
+func (i *Integer) Inspect() string  { return strconv.FormatInt(i.Value, 10) }
 func (i *Integer) Member(name string) MemberFunc {
 	if IntegerMemberFunc != nil {
 		return IntegerMemberFunc(name)
@@ -76,7 +77,7 @@ type Float struct {
 }
 
 func (f *Float) Type() ObjectType { return FLOAT_OBJ }
-func (f *Float) Inspect() string  { return fmt.Sprintf("%f", f.Value) }
+func (f *Float) Inspect() string  { return strconv.FormatFloat(f.Value, 'f', 6, 64) }
 func (f *Float) Member(name string) MemberFunc {
 	if FloatMemberFunc != nil {
 		return FloatMemberFunc(name)
@@ -91,7 +92,7 @@ type Boolean struct {
 }
 
 func (b *Boolean) Type() ObjectType { return BOOLEAN_OBJ }
-func (b *Boolean) Inspect() string  { return fmt.Sprintf("%t", b.Value) }
+func (b *Boolean) Inspect() string  { return strconv.FormatBool(b.Value) }
 func (b *Boolean) Member(name string) MemberFunc {
 	if BooleanMemberFunc != nil {
 		return BooleanMemberFunc(name)

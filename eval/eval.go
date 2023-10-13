@@ -9,13 +9,6 @@ var (
 	NULL = &object.Null{}
 )
 
-func nativeBoolToBooleanObject(input bool) *object.Boolean {
-	if input {
-		return &object.Boolean{Value: true}
-	}
-	return &object.Boolean{Value: false}
-}
-
 func isError(obj object.Object) bool {
 	if obj != nil {
 		return obj.Type() == object.ERROR_OBJ
@@ -56,28 +49,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
 	case *ast.VarStatement:
-		var evaluated object.Object
-		if node.Value != nil {
-			evaluated = Eval(node.Value, env)
-			if isError(evaluated) {
-				return evaluated
-			}
-		}
-		if node.TypeDecl == nil {
-			// infer the var type from value
-			env.Set(node.Name.Value, evaluated)
-		} else {
-			// explicitly declare the type of the var
-			if node.TypeDecl.Package == nil {
-				evaluated = env.Type("", node.TypeDecl.Name.Value, evaluated)
-			} else {
-				evaluated = env.Type(node.TypeDecl.Package.Value, node.TypeDecl.Name.Value, evaluated)
-			}
-			if isError(evaluated) {
-				return evaluated
-			}
-			env.Set(node.Name.Value, evaluated)
-		}
+		return evalVarStatement(node, env)
 	case *ast.ReturnStatement:
 		val := Eval(node.ReturnValue, env)
 		if isError(val) {
@@ -95,7 +67,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(evaluated) {
 			return evaluated
 		}
-		return apply(val, evaluated)
+		return evalAssignStatement(val, evaluated)
 	case *ast.OperAssignStatement:
 		left, ok := env.Get(node.Name.Value)
 		if !ok {
@@ -109,7 +81,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(evaluated) {
 			return evaluated
 		}
-		return apply(left, evaluated)
+		return evalAssignStatement(left, evaluated)
 	case *ast.PrefixExpression:
 		right := Eval(node.Right, env)
 		if isError(right) {
@@ -145,7 +117,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if len(args) == 1 && isError(args[0]) {
 			return args[0]
 		}
-		return applyFunction(function, args)
+		return evalCallFunction(function, args)
 	case *ast.IndexExpression:
 		left := Eval(node.Left, env)
 		if isError(left) {
@@ -175,7 +147,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.FloatLiteral:
 		return &object.Float{Value: node.Value}
 	case *ast.Boolean:
-		return nativeBoolToBooleanObject(node.Value)
+		return &object.Boolean{Value: node.Value}
 	case *ast.StringLiteral:
 		return &object.String{Value: node.Value}
 	case *ast.ArrayLiteral:
@@ -232,46 +204,33 @@ func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Ob
 	return result
 }
 
-func apply(left object.Object, right object.Object) object.Object {
-	switch lv := left.(type) {
-	case *object.Integer:
-		switch rv := right.(type) {
-		case *object.Integer:
-			lv.Value = rv.Value
-			return nil
-		}
-	case *object.Float:
-		switch rv := right.(type) {
-		case *object.Integer:
-			lv.Value = float64(rv.Value)
-			return nil
-		case *object.Float:
-			lv.Value = rv.Value
-			return nil
-		}
-	case *object.Boolean:
-		switch rv := right.(type) {
-		case *object.Boolean:
-			lv.Value = rv.Value
-			return nil
-		}
-	case *object.String:
-		switch rv := right.(type) {
-		case *object.String:
-			lv.Value = rv.Value
-			return nil
-		}
-	case *object.Array:
-		switch rv := right.(type) {
-		case *object.Array:
-			lv.Elements = rv.Elements
-			return nil
+func evalVarStatement(node *ast.VarStatement, env *object.Environment) object.Object {
+	var evaluated object.Object
+	if node.Value != nil {
+		evaluated = Eval(node.Value, env)
+		if isError(evaluated) {
+			return evaluated
 		}
 	}
-	return object.Errorf("unable to update value of %T with %T", left, right)
+	if node.TypeDecl == nil {
+		// infer the var type from value
+		env.Set(node.Name.Value, evaluated)
+	} else {
+		// explicitly declare the type of the var
+		if node.TypeDecl.Package == nil {
+			evaluated = env.Type("", node.TypeDecl.Name.Value, evaluated)
+		} else {
+			evaluated = env.Type(node.TypeDecl.Package.Value, node.TypeDecl.Name.Value, evaluated)
+		}
+		if isError(evaluated) {
+			return evaluated
+		}
+		env.Set(node.Name.Value, evaluated)
+	}
+	return nil
 }
 
-func applyFunction(fn object.Object, args []object.Object) object.Object {
+func evalCallFunction(fn object.Object, args []object.Object) object.Object {
 	switch fn := fn.(type) {
 	case *object.Function:
 		extendedEnv := extendFunctionEnv(fn, args)
@@ -407,37 +366,11 @@ func evalImmediateIfExpression(ie *ast.ImmediateIfExpression, env *object.Enviro
 }
 
 func evalIndexExpression(left object.Object, index object.Object) object.Object {
-	switch {
-	case left.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
-		return evalArrayIndexExpression(left, index)
-	case left.Type() == object.HASHMAP_OBJ:
-		return evalHashIndexExpression(left, index)
-	default:
+	if operFunc := left.Member("["); operFunc != nil {
+		return operFunc(left, index)
+	} else {
 		return object.Errorf("index operation not supported: %s", left.Type())
 	}
-}
-
-func evalArrayIndexExpression(array object.Object, index object.Object) object.Object {
-	arrayObject := array.(*object.Array)
-	idx := index.(*object.Integer).Value
-	max := int64(len(arrayObject.Elements) - 1)
-	if idx < 0 || idx > max {
-		return NULL
-	}
-	return arrayObject.Elements[idx]
-}
-
-func evalHashIndexExpression(hash object.Object, index object.Object) object.Object {
-	hashObject := hash.(*object.HashMap)
-	key, ok := index.(object.Hashable)
-	if !ok {
-		return object.Errorf("unusable as hash key: %s", index.Type())
-	}
-	pair, ok := hashObject.Pairs[key.HashKey()]
-	if !ok {
-		return NULL
-	}
-	return pair.Value
 }
 
 func evalHashLiteral(node *ast.HashMapLiteral, env *object.Environment) object.Object {
@@ -489,7 +422,7 @@ func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
 	switch right.Type() {
 	case object.INTEGER_OBJ:
 		value := right.(*object.Integer).Value
-		return &object.Integer{Value: -value}
+		return &object.Integer{Value: value * -1}
 	case object.FLOAT_OBJ:
 		value := right.(*object.Float).Value
 		return &object.Float{Value: value * -1}
@@ -510,126 +443,23 @@ func evalPrefixExpression(operator string, right object.Object) object.Object {
 }
 
 func evalInfixExpression(operator string, left object.Object, right object.Object) object.Object {
-	switch {
-	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
-		return evalIntegerInfixExpression(operator, left, right)
-	case left.Type() == object.FLOAT_OBJ && right.Type() == object.FLOAT_OBJ:
-		return evalFloatInfixExpression(operator, left, right)
-	case left.Type() == object.INTEGER_OBJ && right.Type() == object.FLOAT_OBJ:
-		return evalFloatInfixExpression(operator, left, right)
-	case left.Type() == object.FLOAT_OBJ && right.Type() == object.INTEGER_OBJ:
-		return evalFloatInfixExpression(operator, left, right)
-	case left.Type() == object.STRING_OBJ && right.Type() == object.STRING_OBJ:
-		return evalStringInfixExpression(operator, left, right)
-	case left.Type() == object.BOOLEAN_OBJ && right.Type() == object.BOOLEAN_OBJ:
-		return evalBooleanInfixExpression(operator, left, right)
-	case left.Type() != right.Type():
-		return object.Errorf("type mismatch: %s %s %s", left.Type(), operator, right.Type())
-	default:
-		return object.Errorf("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+	if opFunc := left.Member(operator); opFunc != nil {
+		if ret := opFunc(left, right); ret != nil {
+			return ret
+		}
 	}
+	return object.Errorf("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 }
 
-func evalIntegerInfixExpression(operator string, left object.Object, right object.Object) object.Object {
-	leftVal := left.(*object.Integer).Value
-	rightVal := right.(*object.Integer).Value
-	switch operator {
-	case "+":
-		return &object.Integer{Value: leftVal + rightVal}
-	case "-":
-		return &object.Integer{Value: leftVal - rightVal}
-	case "*":
-		return &object.Integer{Value: leftVal * rightVal}
-	case "%":
-		return &object.Integer{Value: leftVal % rightVal}
-	case "/":
-		return &object.Integer{Value: leftVal / rightVal}
-	case "<":
-		return nativeBoolToBooleanObject(leftVal < rightVal)
-	case "<=":
-		return nativeBoolToBooleanObject(leftVal <= rightVal)
-	case ">":
-		return nativeBoolToBooleanObject(leftVal > rightVal)
-	case ">=":
-		return nativeBoolToBooleanObject(leftVal >= rightVal)
-	case "==":
-		return nativeBoolToBooleanObject(leftVal == rightVal)
-	case "!=":
-		return nativeBoolToBooleanObject(leftVal != rightVal)
-	default:
-		return object.Errorf("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+func evalAssignStatement(left object.Object, right object.Object) object.Object {
+	if assignFunc := left.Member("="); assignFunc != nil {
+		left = assignFunc(left, right)
+	} else {
+		left = nil
 	}
-}
 
-func evalFloatInfixExpression(operator string, left object.Object, right object.Object) object.Object {
-	var leftVal float64
-	var rightVal float64
-	switch lv := left.(type) {
-	case *object.Integer:
-		leftVal = float64(lv.Value)
-	default:
-		leftVal = left.(*object.Float).Value
+	if left == nil {
+		return object.Errorf("unable to set value of %T with %T", left, right)
 	}
-	switch rv := right.(type) {
-	case *object.Integer:
-		rightVal = float64(rv.Value)
-	default:
-		rightVal = right.(*object.Float).Value
-	}
-	switch operator {
-	case "+":
-		return &object.Float{Value: leftVal + rightVal}
-	case "-":
-		return &object.Float{Value: leftVal - rightVal}
-	case "*":
-		return &object.Float{Value: leftVal * rightVal}
-	case "/":
-		return &object.Float{Value: leftVal / rightVal}
-	case "<":
-		return nativeBoolToBooleanObject(leftVal < rightVal)
-	case "<=":
-		return nativeBoolToBooleanObject(leftVal <= rightVal)
-	case ">":
-		return nativeBoolToBooleanObject(leftVal > rightVal)
-	case ">=":
-		return nativeBoolToBooleanObject(leftVal >= rightVal)
-	case "==":
-		return nativeBoolToBooleanObject(leftVal == rightVal)
-	case "!=":
-		return nativeBoolToBooleanObject(leftVal != rightVal)
-	default:
-		return object.Errorf("unknown operator: %s %s %s", left.Type(), operator, right.Type())
-	}
-}
-
-func evalStringInfixExpression(operator string, left object.Object, right object.Object) object.Object {
-	leftVal := left.(*object.String).Value
-	rightVal := right.(*object.String).Value
-	switch operator {
-	case "+":
-		return &object.String{Value: leftVal + rightVal}
-	case "<":
-		return nativeBoolToBooleanObject(leftVal < rightVal)
-	case ">":
-		return nativeBoolToBooleanObject(leftVal > rightVal)
-	case "==":
-		return nativeBoolToBooleanObject(leftVal == rightVal)
-	case "!=":
-		return nativeBoolToBooleanObject(leftVal != rightVal)
-	default:
-		return object.Errorf("unknown operator: %s %s %s", left.Type(), operator, right.Type())
-	}
-}
-
-func evalBooleanInfixExpression(operator string, left object.Object, right object.Object) object.Object {
-	leftVal := left.(*object.Boolean).Value
-	rightVal := right.(*object.Boolean).Value
-	switch operator {
-	case "==":
-		return nativeBoolToBooleanObject(leftVal == rightVal)
-	case "!=":
-		return nativeBoolToBooleanObject(leftVal != rightVal)
-	default:
-		return object.Errorf("unknown operator: %s %s %s", left.Type(), operator, right.Type())
-	}
+	return nil
 }

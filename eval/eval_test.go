@@ -2,8 +2,9 @@ package eval_test
 
 import (
 	"bytes"
-	gofmt "fmt"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/thingsme/thingscript/eval"
 	"github.com/thingsme/thingscript/lexer"
@@ -17,7 +18,7 @@ func testEval(input string) object.Object {
 	p := parser.New(l)
 	program := p.ParseProgram()
 	for _, err := range p.Errors() {
-		gofmt.Println("Parse Error:", err)
+		fmt.Println("Parse Error:", err)
 	}
 	env := object.NewEnvironment()
 	env.RegisterPackages(stdlib.Packages()...)
@@ -662,7 +663,7 @@ func TestBuiltinFunctionError(t *testing.T) {
 	}{
 		{`1.length()`, "identifier not found: length"},
 		{`1.length`, "identifier not found: length"},
-		{`"one".length("two")`, "wrong number of arguments. got=1, want=0"},
+		{`"one".length("two")`, "wrong number of arguments. want=0 got=1"},
 	}
 	for _, tt := range tests {
 		evaluated := testEval(tt.input)
@@ -767,33 +768,43 @@ func TestAccessOperation(t *testing.T) {
 }
 
 func TestImports(t *testing.T) {
+	timing := time.Now()
+
 	tests := []struct {
 		input    string
 		expected string
 	}{
 		{
 			input: `
-				var out = import("fmt")
-				out.println(1, 2, "x")
+				out := import("fmt")
+				time := import("time")
+				tick := time.Now()
+				out.println("time:", tick)
 			`,
-			expected: "1 2 x\n",
+			expected: fmt.Sprintf("time: time.Time(%s)\n", timing),
 		},
 		{
 			input: `
-				out := import("fmt")
-				out.println(1, 2, "x")
+				time := import("time")
+				var tick time.Time
+				tick = time.Now()
+				import("fmt").println("time:", tick)
 			`,
-			expected: "1 2 x\n",
+			expected: fmt.Sprintf("time: time.Time(%s)\n", timing),
 		},
 	}
+
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
 		p := parser.New(l)
 		program := p.ParseProgram()
+
 		env := object.NewEnvironment()
 		out := &bytes.Buffer{}
 		env.Stdout = out
+		env.TimeProvider = func() time.Time { return timing }
 		env.RegisterPackages(stdlib.Packages()...)
+
 		ret := eval.Eval(program, env)
 		if ret != nil && ret.Type() == object.ERROR_OBJ {
 			t.Errorf("result is error; %s", ret.Inspect())

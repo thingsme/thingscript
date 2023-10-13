@@ -1,13 +1,17 @@
 package object
 
-import "io"
+import (
+	"io"
+	"time"
+)
 
 type Environment struct {
-	Stdout io.Writer
-
-	store    map[string]Object
 	outer    *Environment
+	store    map[string]Object
 	packages map[string]PackageImpl
+
+	Stdout       io.Writer
+	TimeProvider func() time.Time
 }
 
 func NewEnvironment() *Environment {
@@ -42,52 +46,42 @@ func (e *Environment) Builtin(name string) *Builtin {
 			}
 		}}
 	default:
-		return nil
+		pkg, ok := e.Import("")
+		if !ok {
+			return nil
+		}
+		memberFunc := pkg.Member(name)
+		if memberFunc == nil {
+			return nil
+		}
+		return &Builtin{Func: func(args ...Object) Object {
+			return memberFunc(nil, args...)
+		}}
 	}
 }
 
-func (e *Environment) Type(pkg string, name string, initial Object) Object {
-	if pkg == "" {
-		switch name {
-		case "int":
-			if initial != nil {
-				if in, ok := initial.(*Integer); ok {
-					return in
-				}
-				return Errorf("invalid int type %q", initial.Inspect())
-			}
-			return &Integer{Value: 0}
-		case "float":
-			if initial != nil {
-				if in, ok := initial.(*Float); ok {
-					return in
-				}
-				return Errorf("invalid float type %q", initial.Inspect())
-			}
-			return &Float{Value: 0.0}
-		case "string":
-			if initial != nil {
-				if in, ok := initial.(*String); ok {
-					return in
-				}
-				return Errorf("invalid string type %q", initial.Inspect())
-			}
-			return &String{Value: ""}
-		case "bool":
-			if initial != nil {
-				if in, ok := initial.(*Boolean); ok {
-					return in
-				}
-				return Errorf("invalid boolean type %q", initial.Inspect())
-			}
-			return &Boolean{Value: false}
-		default:
-			return &Null{}
+func (e *Environment) Type(pkgName string, name string, initial Object) Object {
+	pkg, ok := e.packages[pkgName]
+	if !ok {
+		return Errorf("unknown %q", pkgName)
+	}
+	memberFunc := pkg.Member(name)
+	if memberFunc == nil {
+		return Errorf("unknown %s.%s", pkgName, name)
+	}
+	var ret Object
+	if initial != nil {
+		ret = memberFunc(nil, initial)
+		if ret == nil {
+			return Errorf("unknown %s.%s(%s)", pkgName, name, initial.Type())
+		}
+	} else {
+		ret = memberFunc(nil)
+		if ret == nil {
+			return Errorf("unknown %s.%s()", pkgName, name)
 		}
 	}
-	// TODO - other types
-
-	return nil
+	return ret
 }
 
 func (e *Environment) Get(name string) (Object, bool) {
