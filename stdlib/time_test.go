@@ -3,6 +3,7 @@ package stdlib_test
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -29,6 +30,35 @@ func TestTime(t *testing.T) {
 		},
 		{
 			input: `
+				out := import("fmt")
+				time := import("time")
+				var t1 = time.Now()
+				var t2 = time.Time(t1)  // constructor with time.Time
+				out.printf("%v", t2)
+			`,
+			expected: fmt.Sprintf("time.Time(%v)", timing),
+		},
+		{
+			input: `
+				out := import("fmt")
+				time := import("time")
+				var t_epoch = time.Time(` + strconv.FormatInt(timing.UnixNano(), 10) + `) // constructor with epoch nano
+				out.printf("%v", t_epoch)
+			`,
+			expected: fmt.Sprintf("time.Time(%v)", time.Unix(0, timing.UnixNano())),
+		},
+		{
+			input: `
+				out := import("fmt")
+				time := import("time")
+				var t1 = time.Now()
+				var t2 = t1
+				out.printf("%v", t2)
+			`,
+			expected: fmt.Sprintf("time.Time(%v)", timing),
+		},
+		{
+			input: `
 				time := import("time")
 				var tick time.Time
 				tick = time.Now()
@@ -41,6 +71,9 @@ func TestTime(t *testing.T) {
 		l := lexer.New(tt.input)
 		p := parser.New(l)
 		program := p.ParseProgram()
+		for _, err := range p.Errors() {
+			t.Errorf("parse error: %s", err)
+		}
 		env := object.NewEnvironment()
 		out := &bytes.Buffer{}
 		env.Stdout = out

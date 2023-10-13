@@ -59,15 +59,11 @@ func (to *TimeObj) Type() object.ObjectType {
 }
 
 func (to *TimeObj) Inspect() string {
-	return fmt.Sprintf("time.Time(%s)", to.tm.String())
+	return fmt.Sprintf("time.Time(%s)", to.tm)
 }
 
 func (to *TimeObj) Member(name string) object.MemberFunc {
 	switch name {
-	case "string":
-		return func(receiver object.Object, args ...object.Object) object.Object {
-			return &object.String{Value: to.tm.String()}
-		}
 	case "=":
 		return func(receiver object.Object, args ...object.Object) object.Object {
 			if len(args) != 1 {

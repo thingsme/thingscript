@@ -173,7 +173,7 @@ func newToken(tokenType token.TokenType, ch rune) token.Token {
 
 func (l *Lexer) readIdentifier() string {
 	position := l.position
-	for isLetter(l.ch) {
+	for isLetter(l.ch) || isDigit(l.ch) || l.ch == '_' {
 		l.readChar()
 	}
 	return string(l.input[position:l.position])
