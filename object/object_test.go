@@ -6,6 +6,38 @@ import (
 	"github.com/thingsme/thingscript/ast"
 )
 
+func TestNull(t *testing.T) {
+	obj := &Null{}
+	fn := obj.Member("+")
+	if fn != nil {
+		t.Errorf("error op")
+	}
+}
+
+func TestError(t *testing.T) {
+	obj := &Error{}
+	fn := obj.Member("+")
+	if fn != nil {
+		t.Errorf("error op")
+	}
+}
+
+func TestBuiltin(t *testing.T) {
+	obj := &Builtin{}
+	fn := obj.Member("+")
+	if fn != nil {
+		t.Errorf("error op")
+	}
+}
+
+func TestFunction(t *testing.T) {
+	obj := &Function{}
+	fn := obj.Member("+")
+	if fn != nil {
+		t.Errorf("error op")
+	}
+}
+
 func TestInteger(t *testing.T) {
 	obj := &Integer{Value: 123}
 	fn := obj.Member("+")
@@ -68,7 +100,7 @@ func TestInspects(t *testing.T) {
 		{&String{Value: "text"}, STRING_OBJ, "text"},
 		{&ReturnValue{Value: &String{Value: "result"}}, RETURN_VALUE_OBJ, "result"},
 		{&Break{}, BREAK_OBJ, "break"},
-		{&Function{Parameters: []*ast.Identifier{}, Body: &ast.BlockStatement{}}, FUNCTION_OBJ, "func() {\n}"},
+		{&Function{Parameters: []*ast.Identifier{{Value: "p1"}}, Body: &ast.BlockStatement{}}, FUNCTION_OBJ, "func(p1) {\n}"},
 		{&Builtin{}, BUILTIN_OBJ, "builtin"},
 		{&Array{Elements: []Object{&Integer{Value: 1}, &Integer{Value: 2}, &Integer{Value: 3}}}, ARRAY_OBJ, "[1, 2, 3]"},
 		{&HashMap{Pairs: map[HashKey]HashPair{(&String{Value: "key"}).HashKey(): {Key: &String{Value: "key"}, Value: &String{Value: "value"}}}}, HASHMAP_OBJ, "{key: value}"},

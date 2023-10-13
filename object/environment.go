@@ -1,6 +1,7 @@
 package object
 
 import (
+	"fmt"
 	"io"
 	"time"
 )
@@ -65,20 +66,26 @@ func (e *Environment) Type(pkgName string, name string, initial Object) Object {
 	if !ok {
 		return Errorf("unknown %q", pkgName)
 	}
+	var qname string
+	if pkgName == "" {
+		qname = name
+	} else {
+		qname = fmt.Sprintf("%s.%s", pkgName, name)
+	}
 	memberFunc := pkg.Member(name)
 	if memberFunc == nil {
-		return Errorf("unknown %s.%s", pkgName, name)
+		return Errorf("unknown %q", qname)
 	}
 	var ret Object
 	if initial != nil {
 		ret = memberFunc(nil, initial)
 		if ret == nil {
-			return Errorf("unknown %s.%s(%s)", pkgName, name, initial.Type())
+			return Errorf("unknown %q(%s)", qname, initial.Type())
 		}
 	} else {
 		ret = memberFunc(nil)
 		if ret == nil {
-			return Errorf("unknown %s.%s()", pkgName, name)
+			return Errorf("unknown %q()", qname)
 		}
 	}
 	return ret

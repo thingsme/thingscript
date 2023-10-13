@@ -39,6 +39,14 @@ func TestBuiltin(t *testing.T) {
 	if fmtPkg.Type() != object.PACKAGE_OBJ {
 		t.Fatal("no fmt package found")
 	}
+	expectErr := btImport.Func()
+	if expectErr.Inspect() != "ERROR: wrong number of arguements. got=0, want=1" {
+		t.Errorf("import without args, got=%q", expectErr.Inspect())
+	}
+	expectErr = btImport.Func(&object.Integer{Value: 0})
+	if expectErr.Inspect() != "ERROR: argument to import must be string, got INTEGER" {
+		t.Errorf("import without args, got=%q", expectErr.Inspect())
+	}
 
 	invalidPkg := btImport.Func(&object.String{Value: "something_does_not_exist"})
 	if invalidPkg.Type() != object.ERROR_OBJ {
@@ -81,6 +89,31 @@ func TestTypes(t *testing.T) {
 			}
 		default:
 			t.Errorf("wrong test type %T", tt.expected)
+		}
+	}
+}
+
+func TestTypesError(t *testing.T) {
+	env := object.NewEnvironment()
+	env.RegisterPackages(stdlib.Packages()...)
+
+	tests := []struct {
+		input    string
+		init     object.Object
+		expected string
+	}{
+		{"xyz", nil, "unknown \"xyz\""},
+	}
+
+	for _, tt := range tests {
+		obj := env.Type("", tt.input, tt.init)
+		err, ok := obj.(*object.Error)
+		if !ok {
+			t.Errorf("expect error, got=%T", err)
+			continue
+		}
+		if err.Message != tt.expected {
+			t.Errorf("wrong error %q, got=%q", tt.expected, err.Message)
 		}
 	}
 }
