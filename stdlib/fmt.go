@@ -12,7 +12,11 @@ type fmtPkg struct {
 	out io.Writer
 }
 
-var _ object.PackageImpl = &fmtPkg{}
+var _ object.Package = &fmtPkg{}
+
+func (tp *fmtPkg) Type() object.ObjectType { return object.PACKAGE_OBJ }
+
+func (tp *fmtPkg) Inspect() string { return "package fmt" }
 
 func (fp *fmtPkg) Name() string { return "fmt" }
 

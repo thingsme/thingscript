@@ -11,7 +11,11 @@ type timePkg struct {
 	timeProvider func() time.Time
 }
 
-var _ object.PackageImpl = &timePkg{}
+var _ object.Package = &timePkg{}
+
+func (tp *timePkg) Type() object.ObjectType { return object.PACKAGE_OBJ }
+
+func (tp *timePkg) Inspect() string { return "package time" }
 
 func (tp *timePkg) Name() string { return "time" }
 

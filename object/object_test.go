@@ -6,6 +6,54 @@ import (
 	"github.com/thingsme/thingscript/ast"
 )
 
+func TestInteger(t *testing.T) {
+	obj := &Integer{Value: 123}
+	fn := obj.Member("+")
+	if fn == nil {
+		t.Errorf("error op")
+	}
+}
+
+func TestFloat(t *testing.T) {
+	obj := &Float{Value: 1.234}
+	fn := obj.Member("+")
+	if fn == nil {
+		t.Errorf("error op")
+	}
+}
+
+func TestBool(t *testing.T) {
+	obj := &Boolean{Value: false}
+	fn := obj.Member("==")
+	if fn == nil {
+		t.Errorf("error op")
+	}
+}
+
+func TestString(t *testing.T) {
+	obj := &String{}
+	fn := obj.Member("+")
+	if fn == nil {
+		t.Errorf("error op")
+	}
+}
+
+func TestArray(t *testing.T) {
+	obj := &Array{}
+	fn := obj.Member("[")
+	if fn == nil {
+		t.Errorf("error op")
+	}
+}
+
+func TestHashMap(t *testing.T) {
+	obj := &HashMap{}
+	fn := obj.Member("[")
+	if fn == nil {
+		t.Errorf("error op")
+	}
+}
+
 func TestInspects(t *testing.T) {
 	tests := []struct {
 		obj      Object
@@ -24,7 +72,6 @@ func TestInspects(t *testing.T) {
 		{&Builtin{}, BUILTIN_OBJ, "builtin"},
 		{&Array{Elements: []Object{&Integer{Value: 1}, &Integer{Value: 2}, &Integer{Value: 3}}}, ARRAY_OBJ, "[1, 2, 3]"},
 		{&HashMap{Pairs: map[HashKey]HashPair{(&String{Value: "key"}).HashKey(): {Key: &String{Value: "key"}, Value: &String{Value: "value"}}}}, HASHMAP_OBJ, "{key: value}"},
-		{&Package{}, PACKAGE_OBJ, "import()"},
 	}
 
 	for _, tt := range tests {

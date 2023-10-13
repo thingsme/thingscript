@@ -5,8 +5,8 @@ import (
 	"github.com/thingsme/thingscript/object"
 )
 
-func Packages() []object.PackageImpl {
-	return []object.PackageImpl{
+func Packages() []object.Package {
+	return []object.Package{
 		&primitives{},
 		&fmtPkg{},
 		&timePkg{},
@@ -25,7 +25,11 @@ func init() {
 type primitives struct {
 }
 
-var _ object.PackageImpl = &primitives{}
+var _ object.Package = &primitives{}
+
+func (tp *primitives) Type() object.ObjectType { return object.PACKAGE_OBJ }
+
+func (tp *primitives) Inspect() string { return "package <primitives>" }
 
 func (p *primitives) Name() string { return "" }
 

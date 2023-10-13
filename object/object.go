@@ -263,26 +263,9 @@ func (h *HashMap) Member(name string) MemberFunc {
 
 var HashMapMemberFunc func(name string) MemberFunc
 
-type Package struct {
-	pkg PackageImpl
-}
-
-type PackageImpl interface {
+type Package interface {
+	Object
 	Name() string
 	Member(name string) MemberFunc
 	OnLoad(*Environment)
-}
-
-func (p *Package) Type() ObjectType { return PACKAGE_OBJ }
-func (p *Package) Inspect() string {
-	if p.pkg == nil {
-		return "import()"
-	}
-	return fmt.Sprintf("import(%q)", p.pkg.Name())
-}
-func (p *Package) Member(name string) MemberFunc {
-	if p.pkg == nil {
-		return nil
-	}
-	return p.pkg.Member(name)
 }
