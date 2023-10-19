@@ -17,6 +17,7 @@ type Lexer struct {
 	Position  token.Position
 }
 
+// Creates a new Lexer instance with the given input string.
 func New(input string) *Lexer {
 	l := &Lexer{
 		input:    []rune(input),
